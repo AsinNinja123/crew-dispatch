@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Your Job — Artisan Specialties</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --green:#16a06b; --red:#d24631; --ink:#161a22; --muted:#66708a; --line:#dde4ef;
+          --bg:#f2f5fa; --accent:#2563eb; --accent2:#1d4ed8; --accent-lt:#7fa7f7;
+          --charcoal:#141a26; --charcoal2:#1f2a3d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         background:
+           linear-gradient(rgba(37,99,235,.04) 1px, transparent 1px),
+           linear-gradient(90deg, rgba(37,99,235,.04) 1px, transparent 1px),
+           radial-gradient(700px 300px at 100% -10%, rgba(37,99,235,.09), transparent),
+           var(--bg);
+         background-size:26px 26px, 26px 26px, auto, auto;
+         color:var(--ink); -webkit-text-size-adjust:100%; }
+  .wrap { max-width:520px; margin:0 auto; padding:16px 16px 36px; }
+  .hero { background:linear-gradient(135deg,var(--charcoal),var(--charcoal2)); color:#fff;
+          border-radius:16px; border-bottom:3px solid var(--accent); padding:18px 20px;
+          margin-bottom:14px; box-shadow:0 6px 20px rgba(20,22,28,.25);
+          display:flex; align-items:center; gap:14px; }
+  .hero img { height:48px; width:auto; border-radius:9px; flex:none;
+              border:2px solid var(--accent); box-shadow:0 1px 5px rgba(0,0,0,.35); }
+  .hero .brandname { font-size:10px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-lt); }
+  .hero h1 { font-family:'Barlow Condensed',sans-serif; font-size:27px; font-weight:700; letter-spacing:.02em; margin:2px 0 0; line-height:1.05; }
+  .hero .sub { color:rgba(255,255,255,.8); font-size:14px; font-weight:600; margin-top:4px; }
+  .dayhd { display:flex; align-items:baseline; gap:8px; margin:20px 2px 8px; }
+  .dayhd:first-of-type { margin-top:4px; }
+  .dayhd .tag { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; color:#fff;
+                background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:7px; padding:3px 11px;
+                text-transform:uppercase; letter-spacing:.08em; }
+  .dayhd .d { font-size:14px; font-weight:600; color:var(--muted); }
+  .card { background:#fff; border:1px solid #e2e8f4; border-radius:16px; padding:18px; margin-bottom:14px;
+          box-shadow:0 1px 3px rgba(20,30,55,.06), 0 8px 20px rgba(20,30,55,.05); }
+  .jobtag { display:inline-block; font-size:12px; font-weight:700; color:var(--accent2); background:#dbeafe; padding:3px 10px; border-radius:999px; margin-bottom:10px; }
+  .site { font-family:'Barlow Condensed',sans-serif; font-size:27px; font-weight:700; letter-spacing:.015em; line-height:1.1; }
+  .meta { display:flex; gap:18px; margin:12px 0 4px; flex-wrap:wrap; }
+  .meta .k { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+  .meta .v { font-size:19px; font-weight:700; }
+  .maplink { display:inline-flex; align-items:center; gap:5px; color:var(--accent2); text-decoration:none; font-weight:700; font-size:16px; }
+  .maplink:after { content:"↗"; font-size:13px; }
+  .block { margin-top:14px; }
+  .block .k { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:5px; }
+  .bring, .notes { white-space:pre-wrap; font-size:16px; line-height:1.45; }
+  .notes { color:var(--muted); }
+  .cw { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); }
+  .cw:last-child { border-bottom:none; }
+  .cw .nm { font-size:16px; }
+  .pill { font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.02em; }
+  .pill.Confirmed { background:#e2f2ea; color:var(--green); }
+  .pill.Declined { background:#f8e5e0; color:var(--red); }
+  .pill.Pending { background:#eaeef5; color:var(--muted); }
+  .btns { display:flex; gap:12px; margin-top:6px; }
+  button { flex:1; border:none; border-radius:13px; padding:16px; font-size:17px; font-weight:800; color:#fff; font-family:inherit; cursor:pointer; }
+  button:active { transform:translateY(1px); }
+  .confirm { background:linear-gradient(90deg,#16a06b,#0f8a63); box-shadow:0 2px 10px rgba(22,160,107,.3); }
+  .decline { background:linear-gradient(90deg,#d24631,#b53a27); box-shadow:0 2px 10px rgba(210,70,49,.28); }
+  button:disabled { opacity:.5; }
+  .status-banner { text-align:center; padding:15px; border-radius:13px; font-weight:800; font-size:17px; }
+  .status-banner.Confirmed { background:#e2f2ea; color:var(--green); }
+  .status-banner.Declined { background:#f8e5e0; color:var(--red); }
+  .center { text-align:center; } .muted { color:var(--muted); } .err { color:var(--red); font-weight:700; }
+  .sub { font-size:14px; color:var(--muted); margin-top:11px; text-align:center; }
+  .sub a { color:var(--accent2); font-weight:700; }
+  .divider { border:none; border-top:1px solid var(--line); margin:15px 0; }
+  .savehint { text-align:center; font-size:13px; color:var(--muted); margin-top:8px; padding:0 8px; }
+  @media (prefers-reduced-motion: no-preference){
+    .card { animation:cardin .3s cubic-bezier(.2,.7,.3,1) both; }
+    @keyframes cardin { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:none; } }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="card center muted">Loading your job…</div></div>
+
+<script>
+/* ============================================================================
+   WORKER PAGE — how it works
+
+   1. The URL contains the worker's permanent token:  /job?t=<token>
+   2. load() makes ONE request:  GET /api/assignment?t=<token>
+      (handler: api/assignment.js) which returns
+         { name, today, days:[ {date, jobs:[...]}, ... ] }
+      days[] = today always; tomorrow too after 2pm (if scheduled).
+   3. render() flattens days into JOBS (each job remembers its own date)
+      and draws a hero + a day header + one card per job.
+   4. Confirm / Can't-Make-It POSTs { t, jobSiteId, date, action } to
+      /api/respond — the server finds the matching Daily Schedule row.
+      No record IDs ever appear in the URL or the page.
+   ========================================================================= */
+const esc = (s) => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); // make text HTML-safe
+const token = new URLSearchParams(location.search).get('t') || '';
+let JOBS = []; // flattened: each job carries .date and .dayLabel
+
+function niceDate(iso){
+  const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return iso||'';
+  const dt=new Date(+m[1],+m[2]-1,+m[3]);
+  return dt.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+}
+
+async function load(){
+  const app=document.getElementById('app');
+  if(!token){ app.innerHTML='<div class="card err center">Missing link. Ask your foreman to resend it.</div>'; return; }
+  let d;
+  try{
+    const r=await fetch('/api/assignment?t='+encodeURIComponent(token));
+    d=await r.json(); if(!r.ok) throw new Error(d.error||'Could not load.');
+  }catch(e){ app.innerHTML='<div class="card err center">'+esc(e.message)+'</div>'; return; }
+  render(d);
+}
+
+function coworkersHtml(list){
+  if(!list||!list.length) return '<div class="muted">Just you on this site.</div>';
+  return list.map(c=>`<div class="cw"><span class="nm">${esc(c.name)}</span><span class="pill ${esc(c.status)}">${esc(c.status)}</span></div>`).join('');
+}
+
+// forceOpen = true renders the Confirm/Decline buttons even if already answered
+// (used by "Change my answer").
+function jobCardHtml(j,i,forceOpen){
+  const answered = !forceOpen && (j.status==='Confirmed'||j.status==='Declined');
+  const mapUrl = j.address ? 'https://maps.google.com/?q='+encodeURIComponent((j.site?j.site+', ':'')+j.address) : '';
+  const action = answered
+    ? `<div class="status-banner ${esc(j.status)}">${j.status==='Confirmed'?'✓ Confirmed':"✕ Marked can't make it"}</div>
+       <div class="sub"><a href="#" data-undo="${i}">Change my answer</a></div>`
+    : `<div class="btns">
+         <button class="confirm" data-act="confirm" data-i="${i}">Confirm</button>
+         <button class="decline" data-act="decline" data-i="${i}">Can't Make It</button>
+       </div>`;
+  return `<div class="card" data-card="${i}">
+    ${j.multi?`<span class="jobtag">Job ${j.multiIdx} of ${j.multiOf} ${esc(j.dayLabel.toLowerCase())}</span>`:''}
+    <div class="site">${esc(j.site)}</div>
+    <div class="meta">
+      <div><div class="k">Start</div><div class="v">${esc(j.startTime||'TBD')}</div></div>
+      ${j.address?`<div><div class="k">Address</div>${mapUrl?`<a class="maplink" href="${esc(mapUrl)}" target="_blank" rel="noopener">${esc(j.address)}</a>`:`<div class="v">${esc(j.address)}</div>`}</div>`:''}
+    </div>
+    <div class="meta">
+      <div><div class="k">Vehicle</div><div class="v">${esc(j.vehicle||'Your own car')}</div></div>
+      ${(j.equipment&&j.equipment.length)?`<div><div class="k">Equipment</div><div class="v">${esc(j.equipment.join(', '))}</div></div>`:''}
+    </div>
+    ${j.siteNotes?`<div class="block"><div class="k">Site info</div><div class="notes">${esc(j.siteNotes)}</div></div>`:''}
+    ${j.bring?`<div class="block"><div class="k">Bring / on site</div><div class="bring">${esc(j.bring)}</div></div>`:''}
+    <hr class="divider">
+    <div class="block" style="margin-top:0"><div class="k">Working with</div>${coworkersHtml(j.coworkers)}</div>
+    <hr class="divider">
+    ${action}
+  </div>`;
+}
+
+function render(d){
+  const days=(d.days&&d.days.length)?d.days:[{date:d.date,jobs:d.jobs||[]}];
+  const today=d.today||d.date||'';
+  JOBS=[];
+  days.forEach(day=>{
+    const label = day.date===today ? 'Today' : 'Tomorrow';
+    day.jobs.forEach((j,idx)=>JOBS.push({...j, date:day.date, dayLabel:label,
+      multi:day.jobs.length>1, multiIdx:idx+1, multiOf:day.jobs.length}));
+  });
+  const todayJobs=JOBS.filter(j=>j.dayLabel==='Today');
+  const sub = !JOBS.length ? 'No job scheduled today'
+    : todayJobs.length===0 ? 'Here’s where you’re headed tomorrow'
+    : todayJobs.length===1 ? 'Here’s your job for today'
+    : `You’re on ${todayJobs.length} sites today`;
+  const hero=`<div class="hero">
+    <img src="/logo.png" alt="Artisan Specialties" onerror="this.style.display='none'">
+    <div>
+      <div class="brandname">Artisan Specialties</div>
+      <h1>Hi ${esc(d.name||'there')}</h1>
+      <div class="sub">${esc(sub)}</div>
+    </div>
+  </div>`;
+  const app=document.getElementById('app');
+  if(!JOBS.length){
+    app.innerHTML=hero+`<div class="card center muted">Nothing scheduled for you today.<br>Check with the office if that seems wrong.</div>`+savehint();
+    return;
+  }
+  let html=hero, lastLabel='';
+  JOBS.forEach((j,i)=>{
+    if(j.dayLabel!==lastLabel){
+      lastLabel=j.dayLabel;
+      html+=`<div class="dayhd"><span class="tag">${esc(j.dayLabel)}</span><span class="d">${esc(niceDate(j.date))}</span></div>`;
+    }
+    html+=jobCardHtml(j,i,false);
+  });
+  app.innerHTML=html+savehint();
+  wire();
+}
+const savehint=()=>`<div class="savehint">Save this link — it always shows your next job. After 2pm it shows tomorrow too.</div>`;
+
+function wire(){
+  document.querySelectorAll('[data-act]').forEach(b=>{ b.onclick=()=>respond(JOBS[+b.dataset.i], b.dataset.act, +b.dataset.i); });
+  document.querySelectorAll('[data-undo]').forEach(a=>{ a.onclick=(e)=>{ e.preventDefault(); showButtons(+a.dataset.undo); }; });
+}
+
+function showButtons(i){
+  // Re-render this card with buttons FORCED open, regardless of saved status.
+  const card=document.querySelector(`[data-card="${i}"]`);
+  card.outerHTML=jobCardHtml(JOBS[i], i, true);
+  wire();
+}
+
+async function respond(job, action, i){
+  const card=document.querySelector(`[data-card="${i}"]`);
+  card.querySelectorAll('button').forEach(b=>b.disabled=true);
+  try{
+    const r=await fetch('/api/respond',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:token,jobSiteId:job.jobSiteId,date:job.date,action})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed.');
+    JOBS[i].status=j.status;
+    card.outerHTML=jobCardHtml(JOBS[i], i, false);
+    wire();
+  }catch(e){ card.querySelectorAll('button').forEach(b=>b.disabled=false); alert('Could not save: '+e.message); }
+}
+
+load();
+</script>
+</body>
+</html>

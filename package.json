@@ -1,0 +1,9 @@
+{
+  "name": "crew-dispatch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Crew dispatch board + worker confirmation links. Static HTML/JS + Vercel serverless functions on Airtable.",
+  "engines": {
+    "node": ">=18"
+  }
+}

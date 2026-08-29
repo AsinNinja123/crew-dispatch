@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Crew Dispatch — Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --green:#1f9d55; --red:#d64545; --ink:#15171a; --muted:#6b7280;
+    --line:#e5e7eb; --bg:#f4f5f7; --blue:#2563eb; --sel:#dbeafe; --selbd:#2563eb; }
+  * { box-sizing:border-box; }
+  html,body { height:100%; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink);
+         display:flex; flex-direction:column; }
+  button { font:inherit; font-weight:600; border:none; border-radius:8px; cursor:pointer; }
+  input, select { font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+
+  header { background:#fff; border-bottom:1px solid var(--line); padding:10px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0 8px 0 0; }
+  header .spacer { flex:1; }
+  .btn-ghost { background:#eef0f3; color:var(--ink); padding:8px 12px; }
+  .btn-dup { background:var(--green); color:#fff; padding:8px 14px; }
+  .btn-sm { padding:5px 9px; font-size:13px; }
+  .counts { display:flex; gap:14px; font-size:13px; color:var(--muted); align-items:center; }
+  .dot { width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;}
+  .dot.Confirmed{background:var(--green)} .dot.Declined{background:var(--red)} .dot.Pending{background:#9ca3af}
+  .toggle { font-size:13px;color:var(--muted);display:flex;gap:5px;align-items:center; }
+  .toggle input { width:auto;padding:0; }
+
+  header { flex:none; }
+  .app { display:grid; grid-template-columns:264px 1fr; flex:1; min-height:0; }
+  .site.drag { opacity:.4; }
+  .pane-drop { outline:2px dashed var(--accent); outline-offset:-3px; border-radius:10px; background:#e9f0fe; }
+  .roster { border-right:1px solid var(--line); background:#fff; display:flex; flex-direction:column; min-height:0; }
+  .roster .top { padding:12px 12px 8px; border-bottom:1px solid var(--line); }
+  .roster .hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .roster h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0; }
+  .selbtn { background:#eef0f3; color:var(--ink); font-size:12px; padding:4px 10px; border-radius:7px; }
+  .selbtn.on { background:var(--blue); color:#fff; }
+  .roster .search { width:100%; }
+  .roster .selbar { display:flex; align-items:center; justify-content:space-between; margin-top:8px; font-size:13px; }
+  .roster .selbar b { color:var(--blue); }
+  .roster .list { overflow:auto; padding:6px; flex:1; min-height:0; }
+  .emp { display:flex; align-items:center; gap:8px; padding:8px; border-radius:8px; user-select:none; cursor:grab;
+         background:#fff; border:1px solid var(--line); margin-bottom:4px; }
+  .emp:hover { background:#f3f4f6; }
+  .list.dropremove { outline:2px dashed var(--red); outline-offset:-3px; border-radius:10px; background:#fdf3f0; }
+  .emp.selmode { cursor:pointer; }
+  .emp.sel { background:var(--sel); outline:1px solid var(--selbd); }
+  .emp.dropbefore { box-shadow:inset 0 3px 0 var(--blue); }
+  .emp.dropafter { box-shadow:inset 0 -3px 0 var(--blue); }
+  .emp.drag { opacity:.35; }
+  .emp .box { width:16px;height:16px;border:2px solid #b6bcc6;border-radius:4px;flex:none;display:grid;place-items:center;font-size:11px;color:#fff; }
+  .emp.sel .box { background:var(--blue); border-color:var(--blue); }
+  .emp .nm { flex:1; min-width:0; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .emp .meta { display:flex; align-items:center; gap:6px; flex:none; }
+  .emp .badge { font-size:11px; color:#fff; background:var(--green); border-radius:999px; width:19px; text-align:center; padding:1px 0; }
+  .emp.inactive .nm { color:#aeb4bd; }
+  .rlink { background:#eef0f3; color:#444; font-size:11px; padding:2px 0; border-radius:6px; width:34px; text-align:center; visibility:hidden; }
+  .emp:hover .rlink { visibility:visible; }
+  .rlink.copied { background:var(--green); color:#fff; visibility:visible; }
+
+  .main { overflow:auto; padding:14px; min-height:0; }
+  .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+  .toolbar .sitesearch { flex:1; min-width:200px; max-width:380px; }
+  .toolbar .hint { color:var(--muted); font-size:13px; }
+  /* Excel-style layout: one compact ROW per job site (dad's request).
+     Fixed-width name column so rows line up like a spreadsheet. */
+  .grid { display:flex; flex-direction:column; gap:5px; }
+  .site { background:#fff; border:1px solid var(--line); border-radius:9px; display:flex; align-items:center;
+          flex-wrap:wrap; gap:3px 8px; padding:3px 10px; min-height:38px; }
+  .site.empty { opacity:.9; }
+  .site.has-selected { outline:2px solid var(--selbd); }
+  .site.dropok { outline:2px dashed var(--blue); background:#f0f6ff; }
+  .site .nmtxt { flex:none; width:var(--namew,190px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Excel-style column header with a drag handle to resize the name column */
+  .colhead { flex:none; display:flex; align-items:center; padding:0 10px 4px; font-size:10.5px; font-weight:700;
+             color:var(--muted); text-transform:uppercase; letter-spacing:.07em; user-select:none; }
+  .colhead .nmcol { flex:none; width:calc(var(--namew,190px) + 47px); position:relative; }
+  .colhead .rz { position:absolute; right:2px; top:-3px; width:9px; height:18px; cursor:col-resize; border-right:2px solid var(--line); }
+  .colhead .rz:hover { border-right-color:var(--accent); }
+  /* insertion gap while dragging a site row */
+  .drop-slot { height:38px; margin:1px 0; border:2px dashed var(--accent); border-radius:9px; background:#e9f0fe; }
+  .site .editsite { background:none; color:var(--blue); font-size:12px; padding:2px 4px; cursor:pointer; }
+  .sracts { margin-left:auto; display:flex; gap:4px; flex:none; align-items:center; }
+  .sdot { width:10px; height:10px; border-radius:50%; flex:none; }
+  .sdot.active { background:var(--green); }
+  .sdot.prestart { background:#f5a623; }
+  .sdot.other { background:#c2c7cf; }
+  .grip { cursor:grab; color:#c2c7cf; font-size:13px; user-select:none; flex:none; }
+  .grip:active { cursor:grabbing; }
+  .ratio { font-size:12px; font-weight:700; color:var(--muted); }
+  .ratio.ok { color:var(--green); }
+  .ratio.bad { color:var(--red); }
+  .mi { color:var(--muted); font-weight:600; }
+  .vtag { font-size:11px; background:#e6efff; color:#2455c9; border-radius:5px; padding:1px 6px; margin-left:6px; }
+  .etag { font-size:11px; background:#fff1e0; color:#b7791f; border-radius:5px; padding:1px 6px; margin-left:6px; }
+  .divbar { margin:18px 2px 12px; padding:6px 10px; font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; border-top:2px dashed var(--line); }
+  .greyed { opacity:.55; }
+  .greyed:hover { opacity:1; }
+  .pill { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap; }
+  .pill.Confirmed { background:#e4f5ea; color:var(--green); }
+  .pill.Declined { background:#fbe6e6; color:var(--red); }
+  .pill.Pending { background:#eef0f3; color:var(--muted); }
+  .site .box { width:16px;height:16px;border:2px solid #b6bcc6;border-radius:4px;flex:none;display:grid;place-items:center;font-size:11px;color:#fff; cursor:pointer; }
+  .site.sel { background:var(--sel); outline:1px solid var(--selbd); }
+  .site.sel .box { background:var(--blue); border-color:var(--blue); }
+  .site.lifting { box-shadow:0 10px 28px rgba(20,30,55,.28); opacity:.97; }
+  .site .crew { flex:1; min-width:0; display:flex; flex-wrap:wrap; gap:3px 5px; align-items:center; }
+  .site .crew .none { color:#b9c1cf; font-size:12px; }
+  /* worker chip: small inline pill inside the site row */
+  .wrk { display:inline-flex; align-items:center; gap:5px; padding:2px 7px 2px 6px; border:1px solid var(--line);
+         border-radius:999px; background:#fbfcfe; cursor:grab; }
+  .wrk.mine { background:var(--sel); border-color:var(--selbd); }
+  .wrk.drag { opacity:.4; }
+  .wrk .s { width:8px;height:8px;border-radius:50%;flex:none; }
+  .wrk .s.Confirmed{background:var(--green)} .wrk .s.Declined{background:var(--red)} .wrk .s.Pending{background:#c2c7cf}
+  .wrk .nm { flex:none; font-size:12.5px; white-space:nowrap; }
+  .wrk .tm { font-size:11px; color:var(--muted); }
+  .wrk .acts { display:none; gap:2px; }
+  .wrk:hover .acts { display:flex; }
+  .icon { background:#eef0f3; color:#444; padding:2px 6px; font-size:11.5px; border-radius:6px; }
+  .icon.copied { background:var(--green); color:#fff; }
+  .icon.x:hover { background:var(--red); color:#fff; }
+  .empty-note { color:var(--muted); font-size:13px; padding:10px 13px; }
+
+  .pickrow { display:flex; align-items:center; gap:9px; padding:8px 6px; border-radius:8px; cursor:pointer; }
+  .pickrow:hover { background:#f3f4f6; }
+  .pickrow.sel { background:var(--sel); }
+  .pickrow .box { width:16px;height:16px;border:2px solid #b6bcc6;border-radius:4px;flex:none;display:grid;place-items:center;font-size:11px;color:#fff; }
+  .pickrow.sel .box { background:var(--blue); border-color:var(--blue); }
+  .pickrow .nm { flex:1; font-size:14px; }
+  .eqtoggles { display:flex; flex-wrap:wrap; gap:6px; }
+  .eqtog { font-size:12px; background:#eef0f3; color:#444; border-radius:7px; padding:5px 10px; }
+  .eqtog.on { background:var(--blue); color:#fff; }
+
+  .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#15171a; color:#fff; padding:10px 16px; border-radius:10px; font-size:14px; opacity:0; transition:opacity .2s; z-index:60; pointer-events:none; }
+  .toast.show { opacity:1; }
+
+  .backdrop { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:40; }
+  .backdrop.show { display:flex; }
+  .modal { background:#fff; border-radius:14px; padding:20px; width:min(430px,92vw); }
+  .modal h3 { margin:0 0 12px; }
+  .field { margin-bottom:11px; display:flex; flex-direction:column; gap:5px; }
+  .field label { font-size:13px; color:var(--muted); }
+  .field textarea { min-height:70px; resize:vertical; font:inherit; padding:8px 9px; border:1px solid var(--line); border-radius:8px; }
+  .modal-actions { display:flex; gap:8px; justify-content:space-between; margin-top:6px; }
+  .btn-primary { background:var(--blue); color:#fff; padding:8px 14px; }
+  .err { color:var(--red); font-weight:600; }
+  a { color:var(--blue); }
+  /* ===== Artisan brand skin + layout layer (overrides) ===== */
+  /* Brand = ROYAL BLUE (logo's original color) on blue-charcoal.
+     Repointing --blue/--accent recolors everything that uses them.
+     --accent-lt is for accents sitting on dark surfaces (header, divbar). */
+  :root { --blue:#2563eb; --accent:#2563eb; --accent2:#1d4ed8; --accent-lt:#7fa7f7; --green:#16a06b; --red:#d24631;
+          --bg:#f2f5fa; --ink:#161a22; --line:#dde4ef; --sel:#dbeafe; --selbd:#2563eb;
+          --charcoal:#141a26; --charcoal2:#1f2a3d; }
+  body { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+         /* faint blueprint grid + a blue wash up top */
+         background:
+           linear-gradient(rgba(37,99,235,.04) 1px, transparent 1px),
+           linear-gradient(90deg, rgba(37,99,235,.04) 1px, transparent 1px),
+           radial-gradient(1100px 420px at 100% -12%, rgba(37,99,235,.09), transparent),
+           var(--bg);
+         background-size:26px 26px, 26px 26px, auto, auto; }
+  header { background:linear-gradient(90deg,var(--charcoal),var(--charcoal2)); border-bottom:2px solid var(--accent); color:#fff; box-shadow:0 2px 16px rgba(20,22,28,.28); }
+  .brand { display:flex; align-items:center; gap:10px; margin-right:6px; }
+  /* The mark is a black square with white shapes bleeding to its edges — never
+     put it on white. Shown raw, with a bronze ring to define the square. */
+  .brand img { height:36px; width:auto; border-radius:7px; border:2px solid var(--accent); box-shadow:0 1px 5px rgba(0,0,0,.35); }
+  header h1 { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:22px; letter-spacing:.04em; text-transform:uppercase; color:#fff; line-height:1; }
+  header h1 small { display:block; font-family:'Inter',sans-serif; font-size:9.5px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--accent-lt); }
+  header .counts { color:rgba(255,255,255,.82); }
+  header input[type=date] { background:rgba(255,255,255,.12); color:#fff; border-color:rgba(255,255,255,.24); }
+  .datebox { display:flex; flex-direction:column; align-items:center; gap:1px; }
+  .datebox .dow { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-lt); line-height:1; }
+  header .toggle { color:rgba(255,255,255,.82); }
+  header .btn-ghost { background:rgba(255,255,255,.14); color:#fff; }
+  header .btn-ghost:hover { background:rgba(255,255,255,.26); }
+  .btn-dup { background:linear-gradient(90deg,#16a06b,#0f8a63); box-shadow:0 2px 10px rgba(22,160,107,.3); }
+  .btn-pub { background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#fff; padding:8px 14px; box-shadow:0 2px 10px rgba(37,99,235,.3); }
+  /* Publish & text list */
+  .pubrow { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--line); }
+  .pubrow .who { min-width:0; }
+  .pubrow .who b { display:block; font-size:14.5px; }
+  .pubrow .sites { color:var(--muted); font-size:12.5px; }
+  .pubrow .nophone { display:block; color:var(--red); font-size:11.5px; font-weight:600; }
+  .pubrow .acts { display:flex; gap:6px; flex:none; align-items:center; }
+  .txtbtn { background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#fff !important; font-weight:700; font-size:13px; padding:7px 14px; border-radius:8px; text-decoration:none; }
+  .sentbtn { background:#eef0f3; color:#444; font-size:12px; padding:6px 10px; border-radius:8px; }
+  .sentbtn.on { background:var(--green); color:#fff; }
+  .pubrow.sent { opacity:.45; }
+  .pubrow.sent .who b { text-decoration:line-through; }
+  #pubStamp { font-size:12px; color:var(--muted); }
+  .roster { background:linear-gradient(180deg,#ffffff,#f5f8fd); }
+  .roster h2 { font-family:'Barlow Condensed',sans-serif; font-size:15px; letter-spacing:.09em; color:var(--accent2); }
+  .app { grid-template-columns:var(--rosterw,300px) 1fr; }
+  .roster { position:relative; }
+  .roster .rsz { position:absolute; top:0; right:-3px; width:7px; height:100%; cursor:col-resize; z-index:5; }
+  .roster .rsz:hover { background:rgba(37,99,235,.15); }
+  .cat { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:#fff;
+         background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:5px; padding:1px 6px; white-space:nowrap; flex:none; max-width:82px; overflow:hidden; text-overflow:ellipsis; }
+  .site { box-shadow:0 1px 2px rgba(20,30,55,.05); border-color:#e2e8f4; transition:background .1s ease, box-shadow .1s ease; }
+  .site:hover { background:#fbfdff; box-shadow:0 1px 4px rgba(20,30,55,.10); }
+  .site .nmtxt { font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:17px; letter-spacing:.015em; }
+  .btn-primary { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+  /* LED status lights */
+  .sdot { position:relative; width:11px; height:11px; }
+  .sdot::after { content:''; position:absolute; top:2px; left:2.5px; width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,.9); }
+  .sdot.active { background:#28c07a; box-shadow:0 0 0 2px rgba(40,192,122,.18), 0 0 10px rgba(40,192,122,.8); }
+  .sdot.prestart { background:#e0952f; box-shadow:0 0 0 2px rgba(224,149,47,.18), 0 0 10px rgba(224,149,47,.75); }
+  .sdot.completed { background:#5a5f7a; box-shadow:0 0 0 2px rgba(90,95,122,.18); }
+  .sdot.other { background:#b6ada0; }
+  /* Status pill on every card — Active / Prestart / Inactive / Completed at a glance. */
+  .stpill { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; border-radius:5px; padding:2px 7px; white-space:nowrap; flex:none; margin-right:6px; vertical-align:1px; display:inline-block; }
+  .st-active { background:#e2f2ea; color:var(--green); }
+  .st-prestart { background:#fdf0dc; color:#a56a15; }
+  .st-inactive { background:#eceae6; color:#7a756b; }
+  .st-completed { background:#e6e7f0; color:#4a4f6b; }
+  .st-none { background:#eceae6; color:#9a948a; }
+  .wrk .s.Confirmed { box-shadow:0 0 7px rgba(46,158,107,.9); }
+  .wrk .s.Declined { box-shadow:0 0 7px rgba(192,73,46,.9); }
+  /* draggable divider bar */
+  .divbar { margin:0; border:none; background:linear-gradient(90deg,var(--charcoal),var(--charcoal2)); color:#fff;
+            padding:6px 14px; border-radius:8px; font-size:11.5px; box-shadow:0 3px 10px rgba(20,22,28,.20); flex:none;
+            user-select:none; display:flex; align-items:center; justify-content:space-between; }
+  .divbar .griph { letter-spacing:.06em; color:var(--accent-lt); opacity:.9; }
+  /* one fixed sheet: everything scrolls together, the bar is just a separator */
+  .main { display:flex; flex-direction:column; min-height:0; overflow:hidden; padding:14px 14px 0; }
+  .toolbar { flex:none; }
+  #grid { flex:1; display:flex; flex-direction:column; min-height:0; overflow:auto; gap:10px; padding-right:2px;
+          padding-bottom:92px; /* keep the last rows clear of the floating Summary button */ }
+  .top-pane, .bottom-pane { flex:none; }
+  .bottom-pane { min-height:14px; }
+  /* Summary FAB, bottom-right */
+  #summary { position:fixed; right:22px; bottom:22px; z-index:55; background:linear-gradient(90deg,var(--accent),var(--accent2));
+             color:#fff; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:17px; padding:13px 28px;
+             text-transform:uppercase; letter-spacing:.06em;
+             border-radius:16px; box-shadow:0 8px 24px rgba(37,99,235,.40); }
+  #summary:hover { filter:brightness(1.07); }
+
+  /* ===== tasteful motion ===== */
+  @keyframes cardin { from { opacity:0; transform:translateY(9px) scale(.99); } to { opacity:1; transform:none; } }
+  @keyframes ledpulse { 0%,100% { box-shadow:0 0 3px rgba(150,150,160,.45); } 50% { box-shadow:0 0 9px rgba(150,150,160,.95); } }
+  @keyframes modalin { from { opacity:0; transform:translateY(10px) scale(.985); } to { opacity:1; transform:none; } }
+  .grid.anim .site { animation:cardin .30s cubic-bezier(.2,.7,.3,1) both; }
+  .grid.anim .site:nth-child(2){animation-delay:.03s}
+  .grid.anim .site:nth-child(3){animation-delay:.06s}
+  .grid.anim .site:nth-child(4){animation-delay:.09s}
+  .grid.anim .site:nth-child(5){animation-delay:.12s}
+  .grid.anim .site:nth-child(n+6){animation-delay:.15s}
+  .wrk .s.Pending { background:#c2c7cf; animation:ledpulse 2.2s ease-in-out infinite; }
+  .backdrop.show .modal { animation:modalin .18s ease both; }
+  .toast { transition:opacity .2s ease, transform .2s ease; transform:translateX(-50%) translateY(8px); }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .site, .emp, .btn-ghost, .btn-dup, #summary, .icon, .eqtog { transition:transform .12s ease, box-shadow .12s ease, filter .12s ease, background .15s ease; }
+  #summary:hover { transform:translateY(-2px); }
+  .divbar:active { filter:brightness(1.1); }
+  @media (prefers-reduced-motion: reduce){ .grid.anim .site, .wrk .s.Pending, .backdrop.show .modal { animation:none !important; } }
+
+  /* ====================================================================
+     EXCEL-FLAVORED SKIN  (final override layer — pure CSS, no markup/JS)
+     Goal: make the board read like a fancy Excel worksheet while keeping
+     the Artisan-blue brand, the LED status lights, worker chips and every
+     drag/drop behavior. This is deliberately the LAST block in the <style>
+     so its rules win. Nothing above was deleted — this only re-skins.
+     ==================================================================== */
+  :root{
+    --xl-line:#c3cfe2;     /* main cell gridline */
+    --xl-line2:#dde5f1;    /* lighter inner line */
+    --xl-band:#f2f7fd;     /* even-row banding (Excel's alternating rows) */
+    --xl-head1:#f7faff;    /* header fill top */
+    --xl-head2:#e8f0fb;    /* header fill bottom */
+    --xl-radius:3px;       /* crisp, near-square cells */
+    --sheet:#e7edf6;       /* desk color behind the sheet */
+  }
+  /* a spreadsheet lives on a flat desk, not a blueprint grid */
+  body{ background:var(--sheet); }
+  /* cell text reads like Excel (Calibri/Aptos family), not a display font */
+  .site .nmtxt, .colhead, .emp .nm, .wrk .nm, .ratio, .stpill{
+    font-family:'Segoe UI',Calibri,'Aptos','Inter',sans-serif;
+  }
+
+  /* ---- frozen column-header row (the grey band with column titles) ---- */
+  .colhead{
+    background:linear-gradient(180deg,var(--xl-head1),var(--xl-head2));
+    border:1px solid var(--xl-line); border-bottom:2px solid var(--accent);
+    border-radius:var(--xl-radius) var(--xl-radius) 0 0;
+    padding:7px 10px; margin-bottom:0;
+    font-size:11px; font-weight:700; color:var(--accent2); letter-spacing:.05em;
+    box-shadow:0 1px 3px rgba(20,30,55,.07);
+  }
+  .colhead .nmcol{ border-right:1px solid var(--xl-line); }
+
+  /* ---- the grid becomes contiguous cells: no gaps, collapsed borders ---- */
+  #grid{ gap:0; }
+  .top-pane .grid, .bottom-pane .grid{ gap:0; }
+
+  /* each job-site row = one worksheet row: square, thin bordered, banded */
+  .site{
+    border-radius:0 !important; box-shadow:none !important;
+    border:1px solid var(--xl-line); border-top:none;
+    min-height:34px; padding:2px 10px; gap:2px 8px; background:#fff;
+  }
+  .top-pane .grid .site:first-child,
+  .bottom-pane .grid .site:first-child{ border-top:1px solid var(--xl-line); }
+  /* Excel-style alternating row shading */
+  .top-pane .grid .site:nth-child(even),
+  .bottom-pane .grid .site:nth-child(even){ background:var(--xl-band); }
+  .site:hover{ background:#e6f0ff !important; box-shadow:none !important; }
+  .bottom-pane .grid .site:last-child{ border-radius:0 0 var(--xl-radius) var(--xl-radius) !important; }
+  /* vertical gridline separating the name "column" from the crew "column" */
+  .site .nmtxt{
+    border-right:1px solid var(--xl-line2); padding-right:9px; margin-right:2px;
+    font-family:'Segoe UI',Calibri,'Aptos','Inter',sans-serif;
+    font-weight:600; font-size:15px; letter-spacing:0;
+  }
+  /* numbers line up like a spreadsheet column */
+  .ratio, .wrk .tm, #counts{ font-variant-numeric:tabular-nums; }
+
+  /* ---- roster = the left worksheet column: banded, bordered, tight ---- */
+  .roster .list{ padding:0; }
+  .emp{
+    border-radius:0; border:none; border-bottom:1px solid var(--xl-line2);
+    margin-bottom:0; padding:7px 10px;
+  }
+  .roster .list .emp:nth-child(even){ background:var(--xl-band); }
+  .emp:hover{ background:#e6f0ff; }
+
+  /* ---- Inactive divider reads as a section break between row blocks ---- */
+  .divbar{ margin:9px 0 !important; border-radius:var(--xl-radius) !important; }
+
+  /* ---- re-assert interactive states so banding never hides them ---- */
+  .emp.sel{ background:var(--sel) !important; outline:1px solid var(--selbd) !important; }
+  .site.sel{ background:var(--sel) !important; }
+  .site.has-selected{ outline:2px solid var(--selbd) !important; }
+  .site.dropok{ background:#eaf3ff !important; outline:2px dashed var(--blue) !important; }
+  .wrk.mine{ background:var(--sel) !important; }
+  .list.dropremove{ background:#fdf3f0 !important; }
+
+  /* ====================================================================
+     EXCEL-FLAVORED SKIN v2 — REAL COLUMNS (vertical gridlines + headers)
+     Each job-site row is split into aligned cells with a line between every
+     column, and a matching NAMED header row sits above them. Column widths
+     are shared between header (.ch-*) and rows (.col-*) via the vars below,
+     so the vertical lines run straight down the sheet. Also tightened for
+     compactness. Everything is box-sizing:border-box (set globally up top),
+     which is why equal width + equal padding = perfectly aligned edges.
+     ==================================================================== */
+  :root{ --col-grip:18px; --col-status:88px; --col-ratio:54px; --col-acts:150px; }
+
+  /* ---- header: flat cells divided by gridlines ---- */
+  .colhead{ display:flex; align-items:stretch; gap:0; padding:0; overflow:hidden;
+            border-radius:var(--xl-radius) var(--xl-radius) 0 0;
+            background:linear-gradient(180deg,var(--xl-head1),var(--xl-head2)); }
+  .colhead .ch{ display:flex; align-items:center; padding:6px 8px;
+                border-right:1px solid var(--xl-line); white-space:nowrap; overflow:hidden;
+                font-size:10.5px; font-weight:700; letter-spacing:.05em; color:var(--accent2);
+                text-transform:uppercase; }
+  .ch-grip{ width:var(--col-grip); flex:none; padding:0 !important; border-right:none !important; }
+  .ch-status{ width:var(--col-status); flex:none; }
+  .ch-name{ width:var(--namew,190px); flex:none; position:relative; }
+  .ch-ratio{ width:var(--col-ratio); flex:none; justify-content:center; }
+  .ch-crew{ flex:1; min-width:0; }
+  .ch-acts{ width:var(--col-acts); flex:none; justify-content:flex-end; border-right:none; }
+
+  /* ---- rows: zero the row's own padding; each cell owns its spacing AND
+         its right-hand gridline, so lines run unbroken top to bottom ---- */
+  .site{ padding:0 !important; min-height:27px !important; align-items:stretch;
+         flex-wrap:nowrap !important; }
+  .site .grip{ width:var(--col-grip); flex:none; display:flex; align-items:center;
+               justify-content:center; font-size:12px; }
+  .site .col{ border-right:1px solid var(--xl-line); padding:2px 8px; display:flex;
+              align-items:center; min-height:26px; box-sizing:border-box; }
+  .site .col-status{ width:var(--col-status); flex:none; gap:5px; }
+  .site .col-name{ width:var(--namew,190px); flex:none; display:block; line-height:26px;
+                   font-weight:600; font-size:13.5px; letter-spacing:0; white-space:nowrap;
+                   overflow:hidden; text-overflow:ellipsis; padding-right:8px; margin-right:0;
+                   border-right:1px solid var(--xl-line); }
+  .site .col-ratio{ width:var(--col-ratio); flex:none; justify-content:center; }
+  .site .col-crew{ flex:1; min-width:0; flex-wrap:wrap; gap:2px 4px; }
+  .site .sracts{ width:var(--col-acts); flex:none; margin-left:0; justify-content:flex-end;
+                 padding:2px 8px; gap:3px; }
+
+  /* ---- compact chips + buttons so a row stays one tidy line ---- */
+  .wrk{ padding:1px 6px 1px 5px; gap:4px; }
+  .wrk .nm{ font-size:12px; }
+  .wrk .tm{ font-size:10.5px; }
+  .col-status .stpill{ margin-right:0; padding:1px 5px; font-size:9.5px; }
+  .sracts .icon, .sracts .editsite{ padding:2px 6px; font-size:11px; }
+
+  /* ---- roster a touch more compact to match ---- */
+  .emp{ padding:5px 10px; }
+  .emp .nm{ font-size:13px; }
+
+  /* ====================================================================
+     v3 — alignment fix · no row banding · compact + collapsible crew
+     ==================================================================== */
+
+  /* 1) HEADER + ROWS share ONE scroll container, so the column gridlines
+        always line up (previously the body's scrollbar shifted the rows a
+        few px vs. the header). The .main scrolls; the header stays frozen. */
+  .main{ overflow:auto !important; padding-top:0 !important; }
+  .toolbar{ padding-top:14px; }
+  #grid{ overflow:visible !important; flex:none !important; }
+  .colhead{ position:sticky; top:0; z-index:6; box-shadow:0 3px 6px rgba(20,30,55,.10); }
+
+  /* 2) plain white rows — no alternating color pattern */
+  .top-pane .grid .site:nth-child(even),
+  .bottom-pane .grid .site:nth-child(even){ background:#fff; }
+
+  /* 3) more compact crew panel */
+  .app{ grid-template-columns:var(--rosterw,230px) 1fr; transition:grid-template-columns .22s ease; }
+  .roster .top{ padding:8px 8px 6px; }
+  .roster h2{ font-size:13px; }
+  .roster .search{ padding:5px 8px; font-size:13px; }
+  .emp{ padding:4px 8px; }
+  .emp .nm{ font-size:12.5px; }
+  .emp .box{ width:15px; height:15px; }
+
+  /* 4) collapsible crew panel — slides off the left edge, pull back via tab */
+  .app.roster-collapsed{ grid-template-columns:0 1fr; }
+  .app.roster-collapsed .roster{ opacity:0; pointer-events:none; overflow:hidden; }
+  .roster{ transition:opacity .18s ease; }
+  #rosterReopen{ position:fixed; left:0; top:50%; transform:translateY(-50%); display:none;
+    z-index:50; align-items:center; background:linear-gradient(180deg,var(--accent),var(--accent2));
+    color:#fff; writing-mode:vertical-rl; padding:16px 6px; border:none; cursor:pointer;
+    border-radius:0 9px 9px 0; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    font-size:12px; box-shadow:2px 0 10px rgba(0,0,0,.22); }
+
+  /* ====================================================================
+     v4 — NOTES column + literal Excel sheet look (the "middle chunk")
+     Adds a job-level Notes column (new var, no existing vars changed) and
+     repaints the grid to match the Excel replica: flat gray header cells,
+     uniform #d4d4d4 gridlines, square corners. Colors are literal here on
+     purpose — this is meant to look like Excel, not the app's blue theme.
+     ==================================================================== */
+  :root{ --col-notes:190px; --xl-grid:#d4d4d4; --xl-hdr:#f3f2f1; --xl-hdrtx:#5f6368; }
+
+  /* Notes column — shares a width var between header and rows so it aligns */
+  .ch-notes{ width:var(--col-notes,190px); flex:none; }
+  .site .col-notes{ width:var(--col-notes,190px); flex:none; display:block; line-height:26px;
+                    font-size:12px; color:#3a3a3a; white-space:nowrap; overflow:hidden;
+                    text-overflow:ellipsis; cursor:text; }
+  .site .col-notes:empty::before{ content:'+ note'; color:#b9c0cc; }
+  .noteedit{ width:100%; border:1px solid var(--accent); border-radius:0; padding:1px 4px;
+             font:inherit; font-size:12px; outline:none; }
+
+  /* Excel gray header row */
+  .colhead{ background:var(--xl-hdr); border:1px solid var(--xl-grid); border-bottom:1px solid var(--xl-grid);
+            box-shadow:0 1px 0 var(--xl-grid); border-radius:0; }
+  .colhead .ch{ background:var(--xl-hdr); color:var(--xl-hdrtx); border-right:1px solid var(--xl-grid);
+                font-weight:700; letter-spacing:.02em; }
+  .colhead .ch-acts{ border-right:none; }
+
+  /* Uniform Excel gridlines on every cell + square corners */
+  .site{ border-color:var(--xl-grid) !important; border-radius:0 !important; }
+  .top-pane .grid .site:first-child,
+  .bottom-pane .grid .site:first-child{ border-top-color:var(--xl-grid) !important; }
+  .bottom-pane .grid .site:last-child{ border-radius:0 !important; }
+  .site .col{ border-right-color:var(--xl-grid) !important; }
+  .site .col-name{ border-right-color:var(--xl-grid) !important; }
+  .site .grip{ color:#b6bcc6; }
+  .site:hover{ background:#eef4fd !important; }
+
+  /* ====================================================================
+     v5 — resizable columns + ONE sliding crew handle (same spot to hide
+     and show). Column widths persist in localStorage like the name column.
+     ==================================================================== */
+  .colhead .ch{ position:relative; }
+  .colhead .rz{ position:absolute; top:0; right:0; width:6px; height:100%; cursor:col-resize;
+                border:none; z-index:2; }
+  .colhead .rz:hover{ background:rgba(37,99,235,.30); }
+
+  /* the drawer handle: always visible, sits on the panel's edge, and slides
+     to left:0 when the panel is hidden — one control, one vertical position */
+  #rosterReopen{ display:flex !important; left:var(--rosterw,230px); transform:translateY(-50%);
+                 border-radius:0 9px 9px 0; transition:left .22s ease; }
+  .app.roster-collapsed ~ #rosterReopen{ left:0; }
+
+  /* ====================================================================
+     v6 — alignment root-cause fix · Conf. column gone · Excel format bar ·
+     worksheet background · draggable tab
+     ==================================================================== */
+
+  /* THE alignment bug: an old rule gave the header's name cell +47px vs the
+     rows (.colhead .nmcol { width:calc(--namew + 47px) }). Same width now. */
+  .colhead .nmcol{ width:var(--namew,190px); }
+  #grid{ padding-right:0 !important; }
+
+  /* resize handles: wider hit area + a visible line so you can find them */
+  .colhead .rz{ width:11px; right:0; top:0; height:100%; border-right:2px solid transparent; }
+  .colhead .rz:hover{ background:rgba(37,99,235,.18); border-right-color:var(--accent); }
+  .colhead .rz.rzl{ left:0; right:auto; border-right:none; border-left:2px solid transparent; }
+  .colhead .rz.rzl:hover{ border-left-color:var(--accent); }
+
+  /* empty-worksheet grid under the whole main section (the part you liked) */
+  .main{ background:
+    linear-gradient(to right, rgba(105,130,165,.16) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(105,130,165,.16) 1px, transparent 1px),
+    #fbfcfe;
+    background-size:110px 27px; }
+
+  /* hover that respects a highlight fill: filled rows just darken slightly */
+  .site:hover{ background:var(--rowfill,#eef4fd) !important; filter:brightness(.97); }
+
+  /* the selected (active) row the format toolbar acts on */
+  .site.xlact{ box-shadow:inset 0 0 0 2px var(--accent) !important; }
+
+  /* Excel Home-ribbon style formatting bar */
+  .fmtbar{ display:flex; align-items:center; gap:2px; background:#f3f2f1;
+           border:1px solid #d4d4d4; border-radius:4px; padding:3px 6px; flex:none; }
+  .fmt{ background:transparent; border:1px solid transparent; min-width:26px; height:24px;
+        padding:0 5px; font-size:13px; color:#333; border-radius:3px; font-weight:600; }
+  .fmt:hover{ border-color:#c8c6c4; background:#e4e4e4; }
+  .fmt.sw{ display:grid; place-items:center; }
+  .fmt.sw::before{ content:''; width:14px; height:14px; border:1px solid #9a9a9a; background:var(--sw); }
+  .fmtsep{ width:1px; height:18px; background:#d4d4d4; margin:0 3px; flex:none; }
+  .toolbar .hint{ color:var(--muted); font-size:12px; }
+
+  /* ====================================================================
+     v7 — highlight single BOXES (cells) · small-square grid that stops at
+     the Inactive section · inactive section made solid (no see-through)
+     ==================================================================== */
+
+  /* the small-square grid (like the original) lives ONLY on the active area,
+     which stretches to meet the Inactive bar — so the squares stop there */
+  .main{ background:#f7f9fc; }
+  #grid{ display:flex; flex-direction:column; flex:1 1 auto !important; }
+  .top-pane{ flex:1 !important; background:
+    linear-gradient(rgba(37,99,235,.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,99,235,.07) 1px, transparent 1px);
+    background-size:26px 26px; }
+  .divbar, .bottom-pane{ flex:none; }
+
+  /* inactive section: fully opaque, muted by color instead of transparency */
+  .greyed{ opacity:1; }
+  .greyed:hover{ opacity:1; }
+  .bottom-pane{ background:#eef1f6; }
+  .bottom-pane .grid .site:nth-child(n){ background:#f2f4f8; }
+  .bottom-pane .site .nmtxt{ color:#8f96a3; }
+
+  /* selection outline on the active BOX, not the row */
+  .site.xlact{ box-shadow:none !important; }
+  .site .col.xlact{ box-shadow:inset 0 0 0 2px var(--accent) !important; }
+
+  /* row hover: tint only shows through unfilled cells; fills stay put */
+  .site:hover{ background:#eef4fd !important; filter:none; }
+
+  /* ====================================================================
+     v8 — the Inactive bar doubles as a draggable divider: pull it up to
+     shrink the empty grid area, down to grow it. Dbl-click resets.
+     ==================================================================== */
+  .top-pane{ flex:var(--topflex,1) 1 var(--toph,auto) !important; }
+  #divbar{ cursor:row-resize; }
+  #divbar:hover{ filter:brightness(1.15); }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img src="/logo.png" alt="Artisan Specialties" onerror="this.style.display='none'">
+    <h1>Crew Dispatch<small>Artisan Specialties</small></h1>
+  </div>
+  <div class="datebox"><input type="date" id="date" /><span class="dow" id="dow"></span></div>
+  <button class="btn-ghost btn-sm" id="prev">‹</button>
+  <button class="btn-ghost btn-sm" id="today">Today</button>
+  <button class="btn-ghost btn-sm" id="next">›</button>
+  <div class="counts" id="counts"></div>
+  <div class="spacer"></div>
+  <label class="toggle"><input type="checkbox" id="showAll" /> all projects</label>
+  <button id="summary" title="Read-out of the whole day">Summary</button>
+  <button class="btn-pub" id="publish" title="Text every assigned worker their link">Publish</button>
+  <button class="btn-dup" id="dup">Duplicate Yesterday</button>
+</header>
+
+<div class="app">
+  <aside class="roster">
+    <div class="top">
+      <div class="hd">
+        <h2>Crew</h2>
+        <span style="display:flex;gap:6px">
+          <button class="selbtn" id="addWorker" title="Add a new worker to the crew">+ Add</button>
+          <button class="selbtn" id="selMode" title="Turn on checkboxes to pick several at once">Select</button>
+        </span>
+      </div>
+      <input class="search" id="search" placeholder="Search workers…" />
+      <div class="selbar" id="selbar" style="display:none">
+        <span><b id="selCount">0</b> selected</span>
+        <span><a href="#" id="selAll">all</a> · <a href="#" id="selNone">clear</a> · <label class="toggle" style="display:inline-flex"><input type="checkbox" id="unplacedOnly" /> unplaced</label></span>
+      </div>
+    </div>
+    <div class="list" id="rosterList"></div>
+    <div style="flex:none;padding:8px 12px;border-top:1px solid var(--line)">
+      <button class="btn-ghost btn-sm" id="mkLinks" style="width:100%" title="Generate permanent links for workers who don't have one yet">New-hire links</button>
+    </div>
+    <div class="rsz" id="rosterResize" title="Drag to resize the crew panel"></div>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <input class="sitesearch" id="siteSearch" placeholder="Search job sites…" />
+      <button class="btn-ghost btn-sm" id="addSite" title="Add a new job site (creates a Project in Airtable)">+ New site</button>
+      <button class="selbtn" id="siteEditMode" title="Check the jobs you're working with — checked go on top, unchecked go under the bar">Edit</button>
+      <span class="fmtbar" id="fmtbar">
+        <button class="fmt" id="fB" title="Bold the selected job"><b>B</b></button>
+        <button class="fmt" id="fI" title="Italic"><i>I</i></button>
+        <button class="fmt" id="fU" title="Underline"><u>U</u></button>
+        <span class="fmtsep"></span>
+        <button class="fmt" id="fBig" title="Bigger text">A+</button>
+        <button class="fmt" id="fSm" title="Smaller text">A−</button>
+        <span class="fmtsep"></span>
+        <button class="fmt sw" data-fill="#FFFF00" style="--sw:#FFFF00" title="Yellow highlight"></button>
+        <button class="fmt sw" data-fill="#C6EFCE" style="--sw:#C6EFCE" title="Green highlight"></button>
+        <button class="fmt sw" data-fill="#FFC7CE" style="--sw:#FFC7CE" title="Red highlight"></button>
+        <button class="fmt sw" data-fill="#FFD966" style="--sw:#FFD966" title="Orange highlight"></button>
+        <button class="fmt sw" data-fill="#BDD7EE" style="--sw:#BDD7EE" title="Blue highlight"></button>
+        <button class="fmt sw" data-fill="#D9D9D9" style="--sw:#D9D9D9" title="Gray highlight"></button>
+        <button class="fmt" id="fNoFill" title="Remove highlight">⊘</button>
+        <span class="fmtsep"></span>
+        <button class="fmt" id="fClear" title="Clear all formatting on the selected job" style="width:auto;font-size:11px">Clear</button>
+      </span>
+      <span class="hint" id="fmtHint">click a row, then format</span>
+    </div>
+    <div class="colhead">
+      <span class="ch ch-grip"></span>
+      <span class="ch ch-status">Status<span class="rz" id="statusResize" title="Drag to resize"></span></span>
+      <span class="ch ch-name nmcol">Job site<span class="rz" id="nameResize" title="Drag to resize the name column"></span></span>
+      <span class="ch ch-crew">Crew &amp; vehicles</span>
+      <span class="ch ch-notes"><span class="rz rzl" id="notesLeftResize" title="Drag to resize"></span>Notes<span class="rz" id="notesResize" title="Drag to resize"></span></span>
+      <span class="ch ch-acts">Actions</span>
+    </div>
+    <div id="grid"></div>
+  </main>
+</div>
+
+<button id="rosterReopen" title="Show the crew panel">» Crew</button>
+
+<div class="toast" id="toast"></div>
+
+<!-- Day summary -->
+<div class="backdrop" id="sumbackdrop">
+  <div class="modal" style="width:min(720px,94vw);max-height:86vh;overflow:auto">
+    <h3 id="sumTitle">Day summary</h3>
+    <div id="sumBody"></div>
+    <div class="modal-actions" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn-ghost" onclick="window.print()">Print</button>
+      <button class="btn-primary" id="sumClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Site-first crew picker -->
+<div class="backdrop" id="pbackdrop">
+  <div class="modal">
+    <h3 id="pTitle">Add crew to site</h3>
+    <input type="text" id="pSearch" placeholder="Search workers…" style="width:100%;margin-bottom:8px" />
+    <div id="pList" style="max-height:38vh;overflow:auto;margin-bottom:10px"></div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Vehicle &amp; equipment are set per worker — use ⋯ on a chip after adding.</div>
+    <div class="modal-actions" style="align-items:center">
+      <span style="display:flex;align-items:center;gap:6px"><label style="font-size:13px;color:var(--muted)">Start</label><select id="pTime"><option>6:00am</option><option>7:00am</option><option>other</option></select></span>
+      <span><button class="btn-ghost" id="pCancel">Cancel</button>
+      <button class="btn-primary" id="pAdd">Done</button></span>
+    </div>
+  </div>
+</div>
+
+<!-- Edit assignment -->
+<div class="backdrop" id="backdrop">
+  <div class="modal">
+    <h3 id="mTitle">Edit assignment</h3>
+    <div class="err" id="mErr" style="display:none"></div>
+    <input type="hidden" id="mId" />
+    <div class="field"><label>Start time</label><select id="mStart"><option>6:00am</option><option>7:00am</option><option>other</option></select></div>
+    <div class="field"><label>Vehicle</label><select id="mVeh"></select></div>
+    <div class="field"><label>Equipment</label><div id="mEquip" class="eqtoggles"></div></div>
+    <div class="field"><label>Bring / on site (this worker)</label><textarea id="mBring"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="mDelete" style="color:var(--red)">Remove from site</button>
+      <span><button class="btn-ghost" id="mCancel">Cancel</button>
+      <button class="btn-primary" id="mSave">Save</button></span>
+    </div>
+  </div>
+</div>
+
+<!-- Publish & text list -->
+<div class="backdrop" id="pubbackdrop">
+  <div class="modal" style="width:min(560px,94vw);max-height:86vh;overflow:auto">
+    <h3 style="display:flex;justify-content:space-between;align-items:baseline">Publish &amp; text <span id="pubCount" style="font-size:13px;color:var(--muted);font-weight:600"></span></h3>
+    <div id="pubStamp"></div>
+    <div id="pubList" style="margin-top:6px"></div>
+    <div class="modal-actions" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn-primary" id="pubClose">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Worker add/edit -->
+<div class="backdrop" id="wbackdrop">
+  <div class="modal">
+    <h3 id="wTitle">Worker</h3>
+    <div class="err" id="wErr" style="display:none"></div>
+    <input type="hidden" id="wId" />
+    <div class="field"><label>Name</label><input id="wName" /></div>
+    <div class="field"><label>Role (shows as the roster tag)</label><input id="wCat" placeholder="Foreman, Laborer…" /></div>
+    <div class="field"><label>Phone</label><input id="wPhone" /></div>
+    <div class="field"><label>Email</label><input id="wEmail" /></div>
+    <div class="field"><label>Home address</label><input id="wAddr" /></div>
+    <div class="field"><label>Status</label><select id="wStatus"><option>Current</option><option>Off</option><option>Past</option></select></div>
+    <div class="modal-actions">
+      <span style="display:flex;gap:8px">
+        <button class="btn-ghost" id="wRemove" style="color:var(--red)">Remove from crew</button>
+        <button class="btn-ghost" id="wRegen" title="Old link stops working; copies the new one">New link</button>
+      </span>
+      <span><button class="btn-ghost" id="wCancel">Cancel</button>
+      <button class="btn-primary" id="wSave">Save</button></span>
+    </div>
+  </div>
+</div>
+
+<!-- New job site -->
+<div class="backdrop" id="nsbackdrop">
+  <div class="modal">
+    <h3>New job site</h3>
+    <div class="err" id="nsErr" style="display:none"></div>
+    <div class="field"><label>Site / project name</label><input id="nsName" /></div>
+    <div class="field"><label>Address</label><input id="nsAddr" /></div>
+    <div class="field"><label>One-way miles (for mileage pay)</label><input id="nsMi" type="number" min="0" /></div>
+    <div class="field"><label>Status</label><select id="nsStatus"><option>Active</option><option>Prestart</option></select></div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Creates a Project in Airtable with just these fields — contract &amp; money stay in Airtable.</div>
+    <div class="modal-actions" style="justify-content:flex-end">
+      <button class="btn-ghost" id="nsCancel">Cancel</button>
+      <button class="btn-primary" id="nsSave">Create site</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project info (read-only) -->
+<div class="backdrop" id="sbackdrop">
+  <div class="modal">
+    <h3 id="sTitle">Project</h3>
+    <div class="err" id="siErr" style="display:none"></div>
+    <div id="sInfo" style="font-size:14px;line-height:1.5;margin-bottom:10px"></div>
+    <div id="sEdit" style="display:none">
+      <div class="field"><label>Project name</label><input id="seName" /></div>
+      <div class="field"><label>Address</label><textarea id="seAddr" style="min-height:44px"></textarea></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="field" style="width:104px"><label>One-way miles</label><input id="seMi" type="number" min="0" /></div>
+        <div class="field" style="width:140px"><label>Start date</label><input id="seStart" type="date" /></div>
+        <div class="field" style="width:104px"><label>Duration (days)</label><input id="seDur" type="number" min="0" /></div>
+        <div class="field" style="width:104px"><label>Total sq ft</label><input id="seSqft" type="number" min="0" /></div>
+      </div>
+      <div class="field"><label>Status</label><div id="seStatus" class="eqtoggles"></div></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Completion date recalculates from start + duration. Superintendent, customer, contacts and all money live in Airtable only.</div>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-end;margin-top:6px" id="sViewActions">
+      <button class="btn-ghost" id="sEditBtn">Edit</button>
+      <button class="btn-primary" id="sCancel">Close</button>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-end;margin-top:6px;display:none" id="sEditActions">
+      <button class="btn-ghost" id="seCancel">Cancel</button>
+      <button class="btn-primary" id="siSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   HOW THIS PAGE WORKS — read this first
+
+   1. refresh() downloads everything about ONE day from the server:
+         GET /api/board?date=YYYY-MM-DD        (handler: api/board.js)
+      and stores the reply in the global STATE object:
+         STATE = { employees, jobSites, assignments, vehicles, equipment }
+
+   2. render() redraws the whole screen FROM STATE:
+         renderCounts()  -> the little numbers in the header
+         renderRoster()  -> the crew list on the left
+         renderSites()   -> the job-site cards (top + Inactive shelves)
+      Nothing on screen updates "by itself". After any change we either
+      tweak STATE and re-render, or call refresh() to re-download the truth.
+
+   3. Every button that CHANGES data does the same two steps:
+         fetch('/api/something', {method:'POST', body:...})  then  refresh()
+      The /api functions are the only code that talks to Airtable — the
+      browser never sees the Airtable key. To change what a button writes,
+      edit the matching file in /api.
+
+   4. Polling: the last line of this file re-runs refresh() every 20 seconds
+      so worker confirmations appear without reloading the page.
+
+   5. ADMIN_KEY is the board password. You type it once (prompt), it's kept
+      in localStorage, and withKey()/keyHeaders() attach it to every request.
+      The server checks it in api/_lib.js -> adminOk().
+   ========================================================================= */
+let ADMIN_KEY = localStorage.getItem('cd_admin_key') || '';
+const withKey = (u) => ADMIN_KEY ? u + (u.includes('?')?'&':'?') + 'key=' + encodeURIComponent(ADMIN_KEY) : u;
+const keyHeaders = (h={}) => { if (ADMIN_KEY) h['X-Admin-Key'] = ADMIN_KEY; return h; };
+
+// ---- tiny helpers used everywhere ----
+const $ = (id) => document.getElementById(id);                 // $('date') = document.getElementById('date')
+const esc = (s) => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); // make text safe to put inside HTML
+const escAttr = (s) => esc(s).replace(/"/g,'&quot;');          // same, for HTML attributes
+
+const localISO = (d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const shiftDate = (iso,days)=>{const[y,m,dd]=iso.split('-').map(Number);const x=new Date(y,m-1,dd);x.setDate(x.getDate()+days);return localISO(x);};
+const timeKey = (s)=>{ const m=String(s||'').match(/(\d{1,2}):(\d{2})\s*([ap])?m?/i); if(!m) return 9999; let h=+m[1]; if(m[3]){h=h%12; if(/p/i.test(m[3]))h+=12;} return h*60+(+m[2]); };
+const to12 = (hhmm)=>{ const m=String(hhmm||'').match(/^(\d{1,2}):(\d{2})$/); if(!m) return hhmm||''; let h=+m[1]; const ap=h>=12?'PM':'AM'; h=h%12||12; return `${h}:${m[2]} ${ap}`; };
+const to24 = (s)=>{ const m=String(s||'').match(/(\d{1,2}):(\d{2})\s*([ap])?m?/i); if(!m) return ''; let h=+m[1]; if(m[3]){h=h%12; if(/p/i.test(m[3]))h+=12;} return `${String(h).padStart(2,'0')}:${m[2]}`; };
+const DEFAULT_TIME='6:00am';
+const currentDate = ()=>$('date').value;
+
+// ---- all page state lives in these globals ----
+let STATE={ employees:[], jobSites:[], assignments:[] }; // the day's data, straight from /api/board
+let SELECTED=new Set(), SELECT_MODE=false;               // roster "Select" mode (multi-pick)
+let FILTER='', SITE_FILTER='', SHOW_ALL=false, UNPLACED_ONLY=false; // search boxes + toggles
+let POLL=null, ANIM_ONCE=true, POLL_REFRESH=false;       // 20s auto-reload (no animation on polls)
+let DRAGKIND=''; // 'emp' | 'aid' | 'site' — dataTransfer isn't readable during dragover
+let ACTIVE_CELL=null; // {id, cell} — the box the format toolbar acts on (like Excel's active cell)
+
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1800); }
+
+const dowOf=(iso)=>{ const[y,m,d]=String(iso).split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:'long'}); };
+
+async function refresh(){
+  const date=currentDate(); if(!date) return;
+  $('dow').textContent=dowOf(date);
+  let data;
+  try{ const r=await fetch(withKey('/api/board?date='+date)); data=await r.json();
+    if(r.status===401){ promptKey(); return; } if(!r.ok) throw new Error(data.error||'Load failed.');
+  }catch(e){ $('grid').innerHTML=`<div class="empty-note" style="color:var(--red)">${esc(e.message)}</div>`; return; }
+  STATE=data; ANIM_ONCE=!POLL_REFRESH; POLL_REFRESH=false; render();
+}
+function promptKey(){ const k=prompt('Board password (ADMIN_KEY):',''); if(k){ADMIN_KEY=k;localStorage.setItem('cd_admin_key',k);refresh();} }
+
+// how many sites each worker is on today: { employeeId: count }
+const sitesPerEmp = ()=>{ const m={}; STATE.assignments.forEach(a=>{ if(a.employeeId) m[a.employeeId]=(m[a.employeeId]||0)+1; }); return m; };
+const selectedSiteIds = ()=>{ const s=new Set(); STATE.assignments.forEach(a=>{ if(SELECTED.has(a.employeeId)) s.add(a.jobSiteId); }); return s; };
+const orderedIds = ()=> STATE.employees.slice().sort((a,b)=>(a.order-b.order)||a.name.localeCompare(b.name)).map(e=>e.id);
+
+function render(){ renderCounts(); renderRoster(); renderSites(); }
+
+function renderCounts(){
+  const rows=STATE.assignments, c={Confirmed:0,Declined:0,Pending:0}; rows.forEach(r=>c[r.status]=(c[r.status]||0)+1);
+  const perEmp=sitesPerEmp(); const unplaced=STATE.employees.filter(e=>e.active && !perEmp[e.id]).length;
+  $('counts').innerHTML = `<span>${rows.length} assigned</span><span><span class="dot Confirmed"></span>${c.Confirmed}</span><span><span class="dot Pending"></span>${c.Pending}</span><span><span class="dot Declined"></span>${c.Declined}</span><span>${unplaced} unplaced</span>`;
+}
+
+function renderRoster(){
+  const perEmp=sitesPerEmp(); const q=FILTER.toLowerCase();
+  let list=STATE.employees.filter(e=>e.name.toLowerCase().includes(q));
+  if(UNPLACED_ONLY) list=list.filter(e=>!perEmp[e.id]);
+  list.sort((a,b)=>(a.active===b.active?0:a.active?-1:1)||(a.order-b.order)||a.name.localeCompare(b.name));
+  $('rosterList').innerHTML = list.map(e=>{
+    const sel=SELECTED.has(e.id), n=perEmp[e.id]||0;
+    const linkBtn=e.token
+      ? `<button class="rlink" data-rlink="${escAttr(location.origin+'/job?t='+e.token)}" title="Copy ${escAttr(e.name)}'s link">link</button>`
+      : `<span class="rlink" style="visibility:hidden">link</span>`;
+    const editBtn=`<button class="rlink" style="width:24px" data-winfo="${e.id}" title="Edit ${escAttr(e.name)}'s info">✎</button>`;
+    const badge=`<span class="badge" title="on ${n} site${n===1?'':'s'} today" style="${n?'':'visibility:hidden'}">${n||0}</span>`;
+    const cat=e.category?`<span class="cat" title="${escAttr(e.category)}">${esc(e.category)}</span>`:'';
+    return `<div class="emp ${sel?'sel':''} ${SELECT_MODE?'selmode':''} ${e.active?'':'inactive'}" data-emp="${e.id}" draggable="true">
+      ${SELECT_MODE?`<span class="box">${sel?'✓':''}</span>`:''}
+      <span class="nm" title="${escAttr(e.name)}">${esc(e.name)}</span>
+      <span class="meta">${cat}${badge}${editBtn}${linkBtn}</span>
+    </div>`;
+  }).join('') || '<div class="empty-note">No workers match.</div>';
+  $('selCount').textContent=SELECTED.size;
+
+  document.querySelectorAll('.emp[data-emp]').forEach(el=>{
+    el.onclick=()=>{ if(!SELECT_MODE) return; const id=el.dataset.emp; SELECTED.has(id)?SELECTED.delete(id):SELECTED.add(id); render(); };
+    el.ondragstart=(ev)=>{ ev.dataTransfer.setData('text/plain','emp:'+el.dataset.emp); el.classList.add('drag'); DRAGKIND='emp'; };
+    el.ondragend=()=>{ el.classList.remove('drag'); DRAGKIND=''; };
+    el.ondragover=(ev)=>{ ev.preventDefault();
+      if(DRAGKIND==='aid') return; // chip being dragged home — no reorder markers
+      const r=el.getBoundingClientRect(); const after=(ev.clientY-r.top)>r.height/2;
+      el.classList.toggle('dropafter',after); el.classList.toggle('dropbefore',!after); };
+    el.ondragleave=()=>el.classList.remove('dropbefore','dropafter');
+    el.ondrop=(ev)=>{ ev.preventDefault(); const after=el.classList.contains('dropafter'); el.classList.remove('dropbefore','dropafter');
+      const d=ev.dataTransfer.getData('text/plain'); if(d.startsWith('emp:')) reorderTo(d.slice(4), el.dataset.emp, after); };
+  });
+  document.querySelectorAll('[data-winfo]').forEach(b=>{ b.onclick=(ev)=>{ ev.stopPropagation(); openWorker(b.dataset.winfo); }; });
+  document.querySelectorAll('[data-rlink]').forEach(b=>{ b.onclick=async(ev)=>{ ev.stopPropagation();
+    try{ await navigator.clipboard.writeText(b.dataset.rlink); }catch{ prompt('Copy link:', b.dataset.rlink); }
+    b.textContent='copied'; b.classList.add('copied'); setTimeout(()=>{b.textContent='link';b.classList.remove('copied');},1200); }; });
+}
+
+async function reorderTo(draggedId, targetId, after){
+  if(draggedId===targetId) return;
+  const order=orderedIds();
+  const from=order.indexOf(draggedId); if(from<0) return; order.splice(from,1);
+  let at=order.indexOf(targetId); if(at<0) at=order.length; else at+=(after?1:0);
+  order.splice(at, 0, draggedId);
+  order.forEach((id,i)=>{ const e=STATE.employees.find(x=>x.id===id); if(e) e.order=i; });
+  renderRoster();
+  try{ await fetch(withKey('/api/reorder'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({kind:'employees', ids:order})}); }
+  catch(e){ toast('Could not save order'); }
+}
+
+// Builds the HTML for ONE job-site ROW (Excel-style, dad's request):
+// [grip][LED][site name][pill if not Active][2/3] [worker chips + vehicles] [+ info ✎]
+// s = the site, crew = its assignments today, selSites = highlighted by Select mode.
+function siteCardHtml(s, crew, selSites){
+  const chips=crew.map(a=>{
+    const link=a.employeeToken?location.origin+'/job?t='+a.employeeToken:'';
+    const linkBtn=link?`<button class="icon" data-link="${escAttr(link)}">link</button>`:'';
+    const veh=a.vehicle?`<span class="vtag" title="Vehicle">${esc(a.vehicle)}</span>`:'';
+    const eq=(a.equipment&&a.equipment.length)?`<span class="etag" title="Equipment">${esc(a.equipment.join(', '))}</span>`:'';
+    return `<span class="wrk ${SELECTED.has(a.employeeId)?'mine':''}" draggable="true" data-aid="${a.id}" title="${escAttr(a.employeeName+' · '+(a.startTime||'no time')+(a.vehicle?' · '+a.vehicle:''))}">
+      <span class="s ${esc(a.status)}" title="${esc(a.status)}"></span>
+      <span class="nm">${esc(a.employeeName)}</span>
+      <span class="tm">${esc(a.startTime)}</span>${veh}${eq}
+      <span class="acts">${linkBtn}<button class="icon" data-edit='${escAttr(JSON.stringify(a))}'>⋯</button><button class="icon x" data-del="${a.id}" title="Remove">✕</button></span>
+    </span>`;
+  }).join('') || '';
+  const stKey = /(^|,\s*)Active(,|$)/.test(s.status||'') ? 'active'
+    : /prestart/i.test(s.status||'') ? 'prestart'
+    : /completed/i.test(s.status||'') ? 'completed'
+    : /inactive/i.test(s.status||'') ? 'inactive' : 'none';
+  const sdot = stKey==='active'?'active' : stKey==='prestart'?'prestart' : stKey==='completed'?'completed' : 'other';
+  // status pill only when it ISN'T plain Active — keeps rows quiet but makes
+  // search results (which include everything) unambiguous
+  const stPill = stKey==='active' ? '' : `<span class="stpill st-${stKey}">${esc(s.status||'No status')}</span>`;
+  const conf = crew.filter(a=>a.status==='Confirmed').length;
+  const declined = crew.some(a=>a.status==='Declined');
+  const ratio = crew.length ? `<span class="ratio ${conf===crew.length?'ok':(declined?'bad':'')}">${conf}/${crew.length}</span>` : '';
+  const restoreBtn = s.half==='Bottom' ? `<button class="icon" data-restore="${s.id}" title="Move back to the active shelf (last spot)">▲</button>` : '';
+  // per-CELL Excel-style formatting, saved in Projects.Board Format as JSON:
+  // { c: { status:{fill,bold,...}, name:{...}, crew:{...}, notes:{...} } }
+  let fmt={}; try{ fmt=JSON.parse(s.format||'{}')||{}; }catch{ fmt={}; }
+  const FC = fmt.c || ((fmt.fill||fmt.bold||fmt.italic||fmt.under||fmt.size)?{name:fmt}:{}); // legacy row fmt = name cell
+  const cellCss=(k)=>{ const c=FC[k]||{}; let st='';
+    if(c.fill) st+=`background:${c.fill};`;
+    if(c.bold) st+='font-weight:800;';
+    if(c.italic) st+='font-style:italic;';
+    if(c.under) st+='text-decoration:underline;';
+    const z=+c.size||0; if(z) st+=`font-size:${13.5+2*z}px;`;
+    return st?` style="${escAttr(st)}"`:''; };
+  const actCls=(k)=> (ACTIVE_CELL&&ACTIVE_CELL.id===s.id&&ACTIVE_CELL.cell===k)?' xlact':'';
+  return `<div class="site ${crew.length?'':'empty'} ${selSites.has(s.id)?'has-selected':''} ${SITE_EDIT&&SITE_SEL.has(s.id)?'sel':''}" data-site="${s.id}">
+    ${SITE_EDIT?`<span class="box">${SITE_SEL.has(s.id)?'✓':''}</span>`:''}
+    <span class="grip" data-grip="${s.id}" title="Drag up/down to reorder or change shelf">⠿</span>
+    <span class="col col-status${actCls('status')}" data-cellkey="status"${cellCss('status')}><span class="sdot ${sdot}" title="${esc(s.status||'no status')}"></span>${stPill}</span>
+    <span class="col col-name nmtxt${actCls('name')}" data-cellkey="name" title="${escAttr((s.address||'')+((s.mileage!==''&&s.mileage!=null)?` · ${s.mileage} mi`:''))}"${cellCss('name')}>${esc(s.name)}</span>
+    <div class="col col-crew crew${actCls('crew')}" data-cellkey="crew"${cellCss('crew')}>${chips}</div>
+    <span class="col col-notes${actCls('notes')}" data-cellkey="notes" data-note="${s.id}" title="Double-click to edit this job's note"${cellCss('notes')}>${esc(s.notes||'')}</span>
+    <span class="sracts">
+      ${restoreBtn}${s.half!=='Bottom'?`<button class="icon" data-inactive="${s.id}" title="Move under the bar (Inactive shelf)">▼</button>`:''}
+      <button class="icon" data-pick='${escAttr(JSON.stringify(s))}' title="Add or remove crew on this site">+ crew</button>
+      <button class="editsite" data-editsite='${escAttr(JSON.stringify(s))}'>info</button>
+    </span>
+  </div>`;
+}
+
+function renderSites(){
+  const bySite={}; STATE.assignments.forEach(a=>{ (bySite[a.jobSiteId]=bySite[a.jobSiteId]||[]).push(a); });
+  const selSites=selectedSiteIds(); const q=SITE_FILTER.toLowerCase();
+  let sites=STATE.jobSites.slice().sort((a,b)=>(a.order-b.order)||a.name.localeCompare(b.name)).filter(s=> s.name.toLowerCase().includes(q) || (s.address||'').toLowerCase().includes(q));
+  // Default: only "Active" projects, plus any that already have crew today.
+  // BUT typing in the search box looks through EVERYTHING — the status pill
+  // on each card says what kind of project a result is.
+  if(!SHOW_ALL && !q) sites=sites.filter(s=> (s.status||'').split(/,\s*/).includes('Active') || (bySite[s.id]||[]).length);
+  const crewOf=(s)=>(bySite[s.id]||[]).slice().sort((a,b)=>timeKey(a.startTime)-timeKey(b.startTime));
+  const top=sites.filter(s=>s.half!=='Bottom'), bottom=sites.filter(s=>s.half==='Bottom');
+  const grid=(arr)=>arr.map(s=>siteCardHtml(s, crewOf(s), selSites)).join('');
+
+  const ac = ANIM_ONCE?' anim':''; ANIM_ONCE=false;
+  let html='';
+  if(!sites.length){
+    html=`<div class="top-pane"><div class="empty-note">No sites match.${(SHOW_ALL||q)?'':' Tick “all projects” to see completed/inactive ones.'}</div></div>`;
+  }else{
+    html=`<div class="top-pane"><div class="grid${ac}">${grid(top)||'<div class="empty-note">Nothing up top — send a job up with ▲.</div>'}</div></div>`;
+    html+=`<div class="divbar" id="divbar" title="Drag up/down to resize the sections — double-click to reset"><span>▽ Inactive${bottom.length?` · ${bottom.length}`:''}</span><span class="griph">drag me to resize · drop a job here (or use ▼) to move it under the bar</span></div>`;
+    html+=`<div class="bottom-pane"><div class="grid greyed${ac}">${grid(bottom)}</div></div>`;
+  }
+  $('grid').innerHTML=html;
+
+  document.querySelectorAll('[data-pick]').forEach(b=> b.onclick=()=>openPicker(JSON.parse(b.dataset.pick)));
+  document.querySelectorAll('[data-link]').forEach(b=> b.onclick=async()=>{
+    try{ await navigator.clipboard.writeText(b.dataset.link); }catch{ prompt('Copy link:', b.dataset.link); }
+    b.textContent='copied'; b.classList.add('copied'); setTimeout(()=>{b.textContent='link';b.classList.remove('copied');},1200); });
+  document.querySelectorAll('[data-edit]').forEach(b=> b.onclick=()=>openEdit(JSON.parse(b.dataset.edit)));
+  document.querySelectorAll('[data-del]').forEach(b=> b.onclick=()=>quickRemove(b.dataset.del));
+  document.querySelectorAll('[data-editsite]').forEach(b=> b.onclick=()=>openInfo(JSON.parse(b.dataset.editsite)));
+  document.querySelectorAll('[data-note]').forEach(cell=> cell.ondblclick=(ev)=>{
+    if(SITE_EDIT) return;                       // edit mode click = row checkbox
+    ev.stopPropagation();                       // single click selects the box; double-click edits (like Excel)
+    if(cell.querySelector('input')) return;     // already editing
+    const id=cell.dataset.note, cur=cell.textContent;
+    cell.innerHTML=`<input class="noteedit" value="${escAttr(cur)}" />`;
+    const inp=cell.querySelector('input'); inp.focus(); inp.select();
+    let closed=false;
+    const done=(save)=>{ if(closed) return; closed=true;
+      if(save && inp.value.trim()!==cur) saveNote(id, inp.value.trim()); else renderSites(); };
+    inp.onkeydown=(e)=>{ if(e.key==='Enter'){ e.preventDefault(); done(true); } else if(e.key==='Escape'){ done(false); } };
+    inp.onblur=()=>done(true);
+  });
+  document.querySelectorAll('[data-restore]').forEach(b=> b.onclick=()=>restoreSite(b.dataset.restore));
+  document.querySelectorAll('[data-inactive]').forEach(b=> b.onclick=()=>{ setHalf(b.dataset.inactive,'Bottom'); toast('Moved under the bar'); });
+  document.querySelectorAll('[data-site]').forEach(card=>{
+    // Edit mode: clicking a row toggles its checkbox
+    card.onclick=(ev)=>{
+      if(ev.target.closest('button')||ev.target.closest('.wrk')||ev.target.closest('a')||ev.target.closest('input')) return;
+      const id=card.dataset.site;
+      if(SITE_EDIT){ SITE_SEL.has(id)?SITE_SEL.delete(id):SITE_SEL.add(id); renderSites(); return; }
+      // select the clicked BOX for the format toolbar — class toggle only,
+      // no re-render, so double-click (crew picker / note edit) keeps working
+      const cellEl=ev.target.closest('[data-cellkey]'); if(!cellEl) return;
+      const cell=cellEl.dataset.cellkey;
+      const same=ACTIVE_CELL&&ACTIVE_CELL.id===id&&ACTIVE_CELL.cell===cell;
+      ACTIVE_CELL=same?null:{id,cell};
+      document.querySelectorAll('.col.xlact').forEach(x=>x.classList.remove('xlact'));
+      if(ACTIVE_CELL) cellEl.classList.add('xlact');
+      updateFmtHint();
+    };
+    // double-click anywhere on a row = open the crew picker (fastest edit path)
+    card.ondblclick=(ev)=>{ if(SITE_EDIT) return; if(ev.target.closest('.wrk')||ev.target.closest('button')||ev.target.closest('.col-notes')) return;
+      const b=card.querySelector('[data-pick]'); if(b) openPicker(JSON.parse(b.dataset.pick)); };
+  });
+  updateFmtHint();
+  wireDivbarResize();
+  wireDrag();
+}
+
+// ---- draggable section divider ----
+// Pull the Inactive bar up/down to change the top/bottom proportions (e.g.
+// shrink the empty grid to see inactive jobs better). The top section can
+// never get smaller than its rows (flexbox min-height:auto floors it).
+// Double-click the bar to reset. Height is remembered per browser.
+function wireDivbarResize(){
+  const bar=document.getElementById('divbar'); if(!bar) return;
+  bar.onmousedown=(e)=>{
+    if(e.target.closest('button')) return;
+    e.preventDefault();
+    const tp=document.querySelector('.top-pane'); if(!tp) return;
+    const startY=e.clientY, h0=tp.getBoundingClientRect().height;
+    let moved=false;
+    const mv=(ev)=>{ moved=true;
+      const h=Math.max(0, h0+(ev.clientY-startY));
+      document.documentElement.style.setProperty('--topflex','0');
+      document.documentElement.style.setProperty('--toph', h+'px'); };
+    const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);
+      if(moved){ const tp2=document.querySelector('.top-pane');
+        if(tp2) localStorage.setItem('cd_top_h', Math.round(tp2.getBoundingClientRect().height)); } };
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  };
+  bar.ondblclick=()=>{
+    document.documentElement.style.removeProperty('--toph');
+    document.documentElement.style.removeProperty('--topflex');
+    localStorage.removeItem('cd_top_h');
+    toast('Sections reset');
+  };
+}
+
+// "▲ Add" on an Inactive card: back to the active shelf, LAST spot.
+async function restoreSite(id){
+  const s=STATE.jobSites.find(x=>x.id===id); if(!s) return;
+  s.half='Top';
+  s.order=Math.max(0,...STATE.jobSites.map(x=>x.order===9999?0:x.order))+1;
+  const order=STATE.jobSites.slice().sort((a,b)=>(a.order-b.order)||a.name.localeCompare(b.name)).map(x=>x.id);
+  order.forEach((oid,i)=>{ const t=STATE.jobSites.find(x=>x.id===oid); if(t) t.order=i; });
+  renderSites(); toast(`${s.name} → active shelf`);
+  try{
+    await fetch(withKey('/api/save-site'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id, half:'Top'})});
+    await fetch(withKey('/api/reorder'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({kind:'projects', ids:order})});
+  }catch(e){ toast('Could not save'); }
+}
+
+// ---- board Edit mode (like the roster's Select, but for jobs) ----
+// Check the jobs you're working with; on Done the checked ones go ON TOP and
+// every unchecked job goes UNDER the bar. One decision, whole board arranged.
+let SITE_EDIT=false, SITE_SEL=new Set();
+function toggleSiteEdit(){
+  SITE_EDIT=!SITE_EDIT;
+  const b=$('siteEditMode');
+  b.classList.toggle('on',SITE_EDIT);
+  if(SITE_EDIT){
+    SITE_SEL=new Set(STATE.jobSites.filter(s=>s.half!=='Bottom').map(s=>s.id));
+    b.textContent='Done'; toast('Check jobs to keep on top — everything unchecked goes under the bar');
+    renderSites();
+  } else { b.textContent='Edit'; applySiteEdit(); }
+}
+async function applySiteEdit(){
+  const changes=STATE.jobSites.filter(s=>{
+    const want=SITE_SEL.has(s.id)?'Top':'Bottom';
+    return (s.half||'Top')!==want;
+  });
+  changes.forEach(s=>{ s.half=SITE_SEL.has(s.id)?'Top':'Bottom'; });
+  renderSites();
+  if(!changes.length) return;
+  toast(`Rearranged ${changes.length} job${changes.length===1?'':'s'}`);
+  try{
+    for(const s of changes){
+      await fetch(withKey('/api/save-site'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id:s.id, half:s.half})});
+    }
+  }catch(e){ toast('Could not save arrangement'); refresh(); }
+}
+
+// ---- Excel-style per-job formatting (Projects.Board Format, JSON) ----
+// { fill:'#FFFF00', bold:true, italic:true, under:true, size:-1..4 }
+const CELL_NAMES={status:'status box',name:'job name box',crew:'crew box',notes:'notes box'};
+function updateFmtHint(){
+  const act=ACTIVE_CELL && STATE.jobSites.find(x=>x.id===ACTIVE_CELL.id);
+  const h=$('fmtHint'); if(h) h.textContent = act ? `formatting: ${act.name} — ${CELL_NAMES[ACTIVE_CELL.cell]||'box'}` : 'click a box, then format';
+}
+async function applyFmt(mut){
+  const s=ACTIVE_CELL && STATE.jobSites.find(x=>x.id===ACTIVE_CELL.id);
+  if(!s){ toast('Click a box first, then use the format buttons'); return; }
+  let f={}; try{ f=JSON.parse(s.format||'{}')||{}; }catch{ f={}; }
+  // migrate legacy row-level format to the name cell, then work per-cell
+  if(!f.c) f={ c:(f.fill||f.bold||f.italic||f.under||f.size)?{name:{fill:f.fill,bold:f.bold,italic:f.italic,under:f.under,size:f.size}}:{} };
+  const cell=f.c[ACTIVE_CELL.cell]=f.c[ACTIVE_CELL.cell]||{};
+  mut(cell);
+  Object.keys(cell).forEach(k=>{ if(!cell[k]) delete cell[k]; }); // drop false/0/'' values
+  if(!Object.keys(cell).length) delete f.c[ACTIVE_CELL.cell];
+  s.format=Object.keys(f.c).length?JSON.stringify(f):'';
+  renderSites();
+  try{ await fetch(withKey('/api/save-site'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id:s.id, format:s.format})}); }
+  catch(e){ toast('Could not save formatting'); }
+}
+
+// Save a job's overview note (Projects.Board Notes). Optimistic + persists.
+async function saveNote(id, val){
+  const s=STATE.jobSites.find(x=>x.id===id); if(s) s.notes=val;
+  renderSites();
+  try{ await fetch(withKey('/api/save-site'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id, notes:val})}); }
+  catch(e){ toast('Could not save note'); }
+}
+
+async function setHalf(id, half){
+  const s=STATE.jobSites.find(x=>x.id===id); if(s) s.half=half; renderSites();
+  try{ await fetch(withKey('/api/save-site'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id, half})}); }
+  catch(e){ toast('Could not move'); }
+}
+
+// ---- Excel-style resizable columns (widths remembered in localStorage) ----
+// The bar between shelves is FIXED now (dad's request) — instead, the crew
+// panel and the site-name column have drag handles like spreadsheet columns.
+function wireColResize(handle, cssVar, storeKey, min, max, sign=1){
+  if(!handle) return;
+  handle.onmousedown=(e)=>{
+    e.preventDefault();
+    const cur=parseInt(getComputedStyle(document.documentElement).getPropertyValue(cssVar))||min;
+    const sx=e.clientX; let w=cur;
+    const mv=(ev)=>{ w=Math.max(min, Math.min(max, cur+(ev.clientX-sx)*sign)); document.documentElement.style.setProperty(cssVar, w+'px'); };
+    const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); localStorage.setItem(storeKey, w); };
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  };
+}
+
+// ---- drag & drop ----
+// Everything dragged carries a text payload: "emp:<id>" (roster name),
+// "aid:<id>" (worker chip on a card), or "site:<id>" (card grip).
+// Drop targets read the prefix and decide what to do:
+//   roster name -> card   = assign · chip -> card = move ·
+//   chip -> roster        = remove off the job ·
+//   grip -> card/pane/bar = reorder or change shelf
+function wireDrag(){
+  document.querySelectorAll('.wrk[draggable]').forEach(el=>{
+    el.ondragstart=(ev)=>{ ev.dataTransfer.setData('text/plain','aid:'+el.dataset.aid); el.classList.add('drag'); DRAGKIND='aid'; };
+    el.ondragend=()=>{ el.classList.remove('drag'); DRAGKIND=''; };
+  });
+  // Site rows use a CUSTOM vertical drag (not HTML5 dnd): the row is lifted
+  // and locked to the Y-axis, a gap opens where it would land, and other rows
+  // stay put until you cross their midpoint. Much smoother + axis-locked.
+  document.querySelectorAll('[data-grip]').forEach(g=>{
+    g.onmousedown=(e)=>{ if(SITE_EDIT) return; e.preventDefault(); startSiteDrag(e, g.closest('.site'), g.dataset.grip); };
+  });
+  document.querySelectorAll('[data-site]').forEach(card=>{
+    card.ondragover=(ev)=>{ ev.preventDefault(); card.classList.add('dropok'); };
+    card.ondragleave=()=>card.classList.remove('dropok');
+    card.ondrop=(ev)=>{ ev.preventDefault(); ev.stopPropagation(); card.classList.remove('dropok');
+      const d=ev.dataTransfer.getData('text/plain'); const siteId=card.dataset.site;
+      if(d.startsWith('aid:')) moveAssignment(d.slice(4), siteId);
+      else if(d.startsWith('emp:')) assignOne(d.slice(4), siteId);
+    };
+  });
+}
+
+// ---- custom vertical site drag ----
+function startSiteDrag(e, row, id){
+  if(!row) return;
+  const rect=row.getBoundingClientRect();
+  const slot=slotEl(); slot.style.height=rect.height+'px';
+  row.parentNode.insertBefore(slot, row);
+  // lift: fixed position, X locked to where it was — moves on Y only
+  row.classList.add('lifting');
+  Object.assign(row.style,{ position:'fixed', left:rect.left+'px', top:rect.top+'px', width:rect.width+'px', zIndex:70, pointerEvents:'none' });
+  const offY=e.clientY-rect.top;
+  const move=(ev)=>{ row.style.top=(ev.clientY-offY)+'px'; positionSlot(ev.clientY, row); autoScroll(ev.clientY); };
+  const up=()=>{
+    document.removeEventListener('mousemove',move); document.removeEventListener('mouseup',up);
+    row.classList.remove('lifting');
+    ['position','left','top','width','zIndex','pointerEvents'].forEach(k=>{ row.style[k]=''; });
+    dropSiteViaSlot(id, null); // land where the gap is (renderSites follows)
+  };
+  document.addEventListener('mousemove',move); document.addEventListener('mouseup',up);
+}
+// Put the gap where the row would land: before the first row whose midpoint
+// is below the cursor; past all rows -> end of top or bottom shelf by Y.
+function positionSlot(y, liftedRow){
+  const rows=[...document.querySelectorAll('.grid .site')].filter(r=>r!==liftedRow);
+  for(const r of rows){ const rc=r.getBoundingClientRect();
+    if(y < rc.top + rc.height/2){ if(r.previousElementSibling!==SLOT) r.parentNode.insertBefore(slotEl(), r); return; } }
+  const divbar=document.getElementById('divbar');
+  const topGrid=document.querySelector('.top-pane .grid'), bottomGrid=document.querySelector('.bottom-pane .grid');
+  const target=(divbar && y < divbar.getBoundingClientRect().top) ? topGrid : (bottomGrid||topGrid);
+  if(target && target.lastElementChild!==SLOT) target.appendChild(slotEl());
+}
+function autoScroll(y){ const sc=document.querySelector('.main'); const r=sc.getBoundingClientRect();
+  if(y<r.top+44) sc.scrollTop-=14; else if(y>r.bottom-44) sc.scrollTop+=14; }
+// single reusable insertion-gap element for the custom site drag
+let SLOT=null;
+function slotEl(){ if(!SLOT){ SLOT=document.createElement('div'); SLOT.className='drop-slot'; } return SLOT; }
+function removeSlot(){ if(SLOT&&SLOT.parentNode) SLOT.parentNode.removeChild(SLOT); }
+// Land the dragged site wherever the gap currently is (or fall back to a shelf).
+function dropSiteViaSlot(id, fallbackHalf){
+  const inDom=SLOT&&SLOT.parentNode;
+  const next=inDom?SLOT.nextElementSibling:null, prev=inDom?SLOT.previousElementSibling:null;
+  const inBottom=inDom?!!SLOT.closest('.bottom-pane'):null;
+  removeSlot();
+  if(next&&next.dataset&&next.dataset.site){ reorderProjects(id, next.dataset.site, false); return; }
+  if(prev&&prev.dataset&&prev.dataset.site){ reorderProjects(id, prev.dataset.site, true); return; }
+  const half=inBottom===null?fallbackHalf:(inBottom?'Bottom':'Top');
+  const s=STATE.jobSites.find(x=>x.id===id);
+  if(s&&half&&s.half!==half){ setHalf(id,half); toast(half==='Bottom'?'Moved under the bar':'Moved to active'); }
+  else renderSites();
+}
+
+async function reorderProjects(draggedId, targetId, after){
+  if(draggedId===targetId) return;
+  // Dropping onto a row on the OTHER shelf also moves the dragged site to that shelf.
+  const dragged=STATE.jobSites.find(x=>x.id===draggedId), target=STATE.jobSites.find(x=>x.id===targetId);
+  const newHalf=(dragged&&target&&dragged.half!==target.half)?target.half:null;
+  if(newHalf) dragged.half=newHalf;
+  const order=STATE.jobSites.slice().sort((a,b)=>(a.order-b.order)||a.name.localeCompare(b.name)).map(s=>s.id);
+  const from=order.indexOf(draggedId); if(from<0) return; order.splice(from,1);
+  let at=order.indexOf(targetId); if(at<0) at=order.length; else if(after) at+=1;
+  order.splice(at,0,draggedId);
+  order.forEach((id,i)=>{ const s=STATE.jobSites.find(x=>x.id===id); if(s) s.order=i; });
+  renderSites();
+  try{
+    await fetch(withKey('/api/reorder'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({kind:'projects', ids:order})});
+    if(newHalf) await fetch(withKey('/api/save-site'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id:draggedId, half:newHalf})});
+  }
+  catch(e){ toast('Could not save order'); }
+}
+
+// vehicle dropdown options ("" = Own car) and equipment toggle chips
+function vehOptions(sel){ return '<option value="">Own car</option>'+(STATE.vehicles||[]).map(v=>`<option value="${v.id}" ${sel===v.id?'selected':''}>${esc(v.name)}</option>`).join(''); }
+function eqToggles(container, selSet){
+  container.innerHTML=(STATE.equipment||[]).map(e=>`<button type="button" class="eqtog ${selSet.has(e.id)?'on':''}" data-eq="${e.id}">${esc(e.name)}</button>`).join('')||'<span style="font-size:12px;color:var(--muted)">No equipment defined yet</span>';
+  container.querySelectorAll('[data-eq]').forEach(b=>{ b.onclick=()=>{ const id=b.dataset.eq; selSet.has(id)?selSet.delete(id):selSet.add(id); b.classList.toggle('on'); }; });
+}
+
+async function postAssign(jobSiteId, employeeIds, startTime, vehicleId, equipmentIds){
+  try{ const r=await fetch(withKey('/api/assign-batch'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),
+      body:JSON.stringify({date:currentDate(),jobSiteId,employeeIds,startTime:(startTime||'').trim(),vehicleId:vehicleId||'',equipmentIds:equipmentIds||[]})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Assign failed.');
+    const site=STATE.jobSites.find(s=>s.id===jobSiteId);
+    toast(`Added ${j.created} to ${site?site.name:'site'}${j.skipped?` (${j.skipped} already there)`:''}`); await refresh();
+  }catch(e){ toast(e.message); }
+}
+async function assignOne(empId, jobSiteId){ await postAssign(jobSiteId,[empId], DEFAULT_TIME, '', []); }
+async function moveAssignment(aid, jobSiteId){
+  const a=STATE.assignments.find(x=>x.id===aid); if(a && a.jobSiteId===jobSiteId) return;
+  try{ const r=await fetch(withKey('/api/save-assignment'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id:aid, jobSiteId})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Move failed.');
+    const site=STATE.jobSites.find(s=>s.id===jobSiteId); toast(`Moved ${a?a.employeeName:'worker'} → ${site?site.name:'site'}`); await refresh();
+  }catch(e){ toast(e.message); }
+}
+async function quickRemove(id){
+  try{ const r=await fetch(withKey('/api/delete-assignment'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Remove failed.'); toast('Removed'); refresh();
+  }catch(e){ toast(e.message); }
+}
+
+// ---- crew picker (set-editor) ----
+// Opens with everyone ALREADY on the site pre-checked. Checking someone new
+// adds them on save; UN-checking someone who was here removes them. The
+// picker edits the whole crew set, not just additions.
+let PICK_SITE=null, PICK_SEL=new Set(), PICK_ORIG=new Set(), PICK_FILTER='';
+function openPicker(site){ PICK_SITE=site; PICK_FILTER='';
+  PICK_ORIG=new Set(STATE.assignments.filter(a=>a.jobSiteId===site.id).map(a=>a.employeeId));
+  PICK_SEL=new Set(PICK_ORIG);
+  $('pSearch').value=''; $('pTime').value=DEFAULT_TIME;
+  $('pTitle').textContent='Crew on '+site.name; renderPicker(); $('pbackdrop').classList.add('show'); }
+const closePicker=()=>$('pbackdrop').classList.remove('show');
+function renderPicker(){
+  const q=PICK_FILTER.toLowerCase();
+  const list=STATE.employees.filter(e=>e.name.toLowerCase().includes(q)).sort((a,b)=>(a.active===b.active?0:a.active?-1:1)||(a.order-b.order)||a.name.localeCompare(b.name));
+  $('pList').innerHTML = list.map(e=>{
+    const sel=PICK_SEL.has(e.id); const cat=e.category?`<span class="cat">${esc(e.category)}</span>`:'';
+    return `<div class="pickrow ${sel?'sel':''}" data-pemp="${e.id}"><span class="box">${sel?'✓':''}</span><span class="nm">${esc(e.name)}</span>${cat}</div>`;
+  }).join('') || '<div class="empty-note">No workers match.</div>';
+  document.querySelectorAll('[data-pemp]').forEach(el=>{ el.onclick=()=>{ const id=el.dataset.pemp; PICK_SEL.has(id)?PICK_SEL.delete(id):PICK_SEL.add(id); renderPicker(); }; });
+  const adds=[...PICK_SEL].filter(id=>!PICK_ORIG.has(id)).length;
+  const removes=[...PICK_ORIG].filter(id=>!PICK_SEL.has(id)).length;
+  $('pAdd').textContent = (adds||removes) ? `Save${adds?` +${adds}`:''}${removes?` −${removes}`:''}` : 'Done';
+}
+async function pickAdd(){
+  const adds=[...PICK_SEL].filter(id=>!PICK_ORIG.has(id));
+  const removes=[...PICK_ORIG].filter(id=>!PICK_SEL.has(id));
+  if(!adds.length && !removes.length){ closePicker(); return; }
+  closePicker();
+  try{
+    for(const empId of removes){
+      const a=STATE.assignments.find(x=>x.jobSiteId===PICK_SITE.id && x.employeeId===empId);
+      if(!a) continue;
+      if(a.shared){ toast(`${a.employeeName} shares a legacy row — remove via ✕ on the chip`); continue; }
+      const r=await fetch(withKey('/api/delete-assignment'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id:a.id})});
+      if(!r.ok){ const j=await r.json(); throw new Error(j.error||'Remove failed.'); }
+    }
+    if(adds.length){ await postAssign(PICK_SITE.id, adds, $('pTime').value, '', []); }
+    else { toast(`Removed ${removes.length}`); await refresh(); }
+  }catch(e){ toast(e.message); refresh(); }
+}
+
+// ---- edit assignment ----
+let EDIT_EQ=new Set();
+function openEdit(a){ $('mErr').style.display='none'; $('mTitle').textContent=a.employeeName+' @ '+a.siteName; $('mId').value=a.id; $('mStart').value=a.startTime||DEFAULT_TIME; $('mBring').value=a.bring||'';
+  $('mVeh').innerHTML=vehOptions(a.vehicleId||''); $('mVeh').value=a.vehicleId||'';
+  EDIT_EQ=new Set(a.equipmentIds||[]); eqToggles($('mEquip'), EDIT_EQ);
+  $('backdrop').classList.add('show'); }
+const closeEdit=()=>$('backdrop').classList.remove('show');
+async function saveEdit(){ try{ const r=await fetch(withKey('/api/save-assignment'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id:$('mId').value, startTime:$('mStart').value, bring:$('mBring').value, vehicleId:$('mVeh').value, equipmentIds:[...EDIT_EQ]})}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Save failed.'); closeEdit(); refresh(); }catch(e){ $('mErr').textContent=e.message; $('mErr').style.display='block'; } }
+async function deleteEdit(){ if(!confirm('Remove this worker from the site?')) return; try{ const r=await fetch(withKey('/api/delete-assignment'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id:$('mId').value})}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Delete failed.'); closeEdit(); refresh(); }catch(e){ $('mErr').textContent=e.message; $('mErr').style.display='block'; } }
+
+// ---- publish & text list ----
+// One row per assigned WORKER (a multi-site worker gets ONE text — his
+// permanent link already shows every job). "Text" opens Messages pre-filled
+// via an iOS sms: link (sms:+1XXXXXXXXXX&body=…). Sending stays 100% manual.
+// "mark sent" is client-side only, kept in localStorage per date so dad
+// doesn't lose his place if interrupted (spec: no server-side sent-tracking).
+const SENT_KEY=()=> 'cd_sent_'+currentDate();
+const getSent=()=>{ try{ return new Set(JSON.parse(localStorage.getItem(SENT_KEY())||'[]')); }catch{ return new Set(); } };
+const saveSent=(s)=> localStorage.setItem(SENT_KEY(), JSON.stringify([...s]));
+// "(319) 233-0513" / "319-233-0513" / "13192330513" -> "+13192330513".
+// Returns '' for anything that isn't a US number (e.g. the address text
+// currently sitting in some Phone cells) so we never build a broken sms: link.
+function e164(p){ const d=String(p||'').replace(/\D/g,''); if(d.length===11&&d[0]==='1') return '+'+d; if(d.length===10) return '+1'+d; return ''; }
+
+function openPublish(){
+  // Stamp Published At in Airtable (recordkeeping). The list below never
+  // waits on this — texting is manual and independent of the write.
+  $('pubStamp').textContent='Saving publish time…';
+  fetch(withKey('/api/publish'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({date:currentDate()})})
+    .then(r=>r.json())
+    .then(j=>{ $('pubStamp').textContent = j.error ? ('Publish stamp failed: '+j.error) : (j.stamped ? `Published ✓ — ${j.stamped} row(s) stamped in Airtable` : 'Nothing to stamp — no assignments this day'); })
+    .catch(()=>{ $('pubStamp').textContent='Could not save publish time (the text list still works)'; });
+  renderPublish();
+  $('pubbackdrop').classList.add('show');
+}
+const closePublish=()=>$('pubbackdrop').classList.remove('show');
+function renderPublish(){
+  const sent=getSent();
+  const empById={}; STATE.employees.forEach(e=>{ empById[e.id]=e; });
+  const byEmp={}; // employeeId -> list of site names today
+  STATE.assignments.forEach(a=>{ if(!a.employeeId) return;
+    (byEmp[a.employeeId]=byEmp[a.employeeId]||[]).includes(a.siteName)||byEmp[a.employeeId].push(a.siteName); });
+  const when = currentDate()===localISO(new Date()) ? 'today' : dowOf(currentDate());
+  const rows=Object.entries(byEmp).map(([id,sites])=>{
+    const e=empById[id]||{};
+    const phone=e164(e.phone);
+    const link=e.token ? location.origin+'/job?t='+e.token : '';
+    const first=(e.name||'there').split(' ')[0];
+    const msg=`Hey ${first}, here's your job for ${when}: ${sites.filter(Boolean).join(' & ')}. ${link}`;
+    return { id, name:e.name||'?', sites:sites.filter(Boolean).join(' & '), phone, msg, isSent:sent.has(id) };
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+  $('pubCount').textContent = rows.length ? `${rows.filter(r=>r.isSent).length} of ${rows.length} sent` : '';
+  $('pubList').innerHTML = rows.length ? rows.map(r=>`
+    <div class="pubrow ${r.isSent?'sent':''}">
+      <div class="who"><b>${esc(r.name)}</b><span class="sites">${esc(r.sites)}</span>${r.phone?'':'<span class="nophone">no phone number in Airtable — add it via ✎ on the roster</span>'}</div>
+      <div class="acts">
+        ${r.phone?`<a class="txtbtn" href="${esc(`sms:${r.phone}&body=${encodeURIComponent(r.msg)}`)}">Text</a>`:''}
+        <button class="icon" data-copymsg="${escAttr(r.msg)}">copy msg</button>
+        <button class="sentbtn ${r.isSent?'on':''}" data-sent="${r.id}">${r.isSent?'✓ sent':'mark sent'}</button>
+      </div>
+    </div>`).join('') : '<div class="empty-note">Nobody is assigned on this day yet.</div>';
+  $('pubList').querySelectorAll('[data-sent]').forEach(b=>{ b.onclick=()=>{ const s=getSent(); s.has(b.dataset.sent)?s.delete(b.dataset.sent):s.add(b.dataset.sent); saveSent(s); renderPublish(); }; });
+  $('pubList').querySelectorAll('[data-copymsg]').forEach(b=>{ b.onclick=async()=>{
+    try{ await navigator.clipboard.writeText(b.dataset.copymsg); }catch{ prompt('Copy message:', b.dataset.copymsg); }
+    b.textContent='copied'; setTimeout(()=>{ b.textContent='copy msg'; },1200); }; });
+}
+
+// ---- worker add / edit ----
+// Only CHANGED fields are sent. That matters for Name: some Airtable Name cells
+// have address/DOB junk after a newline; the board only shows line 1, so blindly
+// writing the name back would wipe those extra lines.
+let WORKER_ORIG=null;
+function openWorker(id){
+  const e = id ? STATE.employees.find(x=>x.id===id) : null;
+  WORKER_ORIG = e ? { name:e.name, category:e.category||'', phone:e.phone||'', email:e.email||'', address:e.address||'', status:e.status||'Current' } : null;
+  $('wErr').style.display='none';
+  $('wTitle').textContent = e ? e.name : 'Add worker';
+  $('wId').value = e ? e.id : '';
+  $('wName').value = e ? e.name : '';
+  $('wCat').value = e ? (e.category||'') : '';
+  $('wPhone').value = e ? (e.phone||'') : '';
+  $('wEmail').value = e ? (e.email||'') : '';
+  $('wAddr').value = e ? (e.address||'') : '';
+  $('wStatus').value = e ? (e.status||'Current') : 'Current';
+  $('wRemove').style.display = e ? '' : 'none';
+  $('wRegen').style.display = e ? '' : 'none';
+  $('wbackdrop').classList.add('show');
+}
+async function regenLink(){
+  const id=$('wId').value; if(!id) return;
+  const e=STATE.employees.find(x=>x.id===id);
+  if(!confirm(`Make a NEW link for ${e?e.name:'this worker'}?\nTheir old link stops working immediately — you'll need to text them the new one.`)) return;
+  try{
+    const r=await fetch(withKey('/api/save-employee'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id, regenerateToken:true})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed.');
+    const tok=(j.record&&j.record.fields&&j.record.fields.Token)||'';
+    const link=tok?location.origin+'/job?t='+tok:'';
+    if(link){ try{ await navigator.clipboard.writeText(link); toast('New link copied — old one is dead'); }catch{ prompt('New link (old one is dead):', link); } }
+    closeWorker(); refresh();
+  }catch(e){ $('wErr').textContent=e.message; $('wErr').style.display='block'; }
+}
+const closeWorker=()=>$('wbackdrop').classList.remove('show');
+async function saveWorker(){
+  const id=$('wId').value;
+  const vals={ name:$('wName').value.trim(), category:$('wCat').value.trim(), phone:$('wPhone').value.trim(),
+               email:$('wEmail').value.trim(), address:$('wAddr').value.trim(), status:$('wStatus').value };
+  const body={};
+  Object.entries(vals).forEach(([k,v])=>{ if(!id || !WORKER_ORIG || v!==WORKER_ORIG[k]) body[k]=v; });
+  if(id) body.id=id;
+  if(!id && !vals.name){ $('wErr').textContent='Name is required.'; $('wErr').style.display='block'; return; }
+  try{
+    const r=await fetch(withKey('/api/save-employee'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify(body)});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Save failed.');
+    closeWorker(); toast(id?'Saved':'Worker added — link is ready'); refresh();
+  }catch(e){ $('wErr').textContent=e.message; $('wErr').style.display='block'; }
+}
+async function removeWorker(){
+  const id=$('wId').value; if(!id) return;
+  const e=STATE.employees.find(x=>x.id===id);
+  if(!confirm(`Remove ${e?e.name:'this worker'} from the crew?\nTheir record stays in Airtable (Status → Past); nothing is deleted.`)) return;
+  try{
+    const r=await fetch(withKey('/api/save-employee'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({id, status:'Past'})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed.');
+    closeWorker(); toast('Moved to Past'); refresh();
+  }catch(e){ $('wErr').textContent=e.message; $('wErr').style.display='block'; }
+}
+
+// ---- new job site ----
+function openNewSite(){
+  $('nsErr').style.display='none';
+  $('nsName').value=''; $('nsAddr').value=''; $('nsMi').value=''; $('nsStatus').value='Active';
+  $('nsbackdrop').classList.add('show');
+}
+const closeNewSite=()=>$('nsbackdrop').classList.remove('show');
+async function saveNewSite(){
+  const name=$('nsName').value.trim();
+  if(!name){ $('nsErr').textContent='Site name is required.'; $('nsErr').style.display='block'; return; }
+  try{
+    const r=await fetch(withKey('/api/save-site'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),
+      body:JSON.stringify({name, address:$('nsAddr').value.trim(), mileage:$('nsMi').value, status:$('nsStatus').value})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Create failed.');
+    closeNewSite(); toast(`Added ${name}`); refresh();
+  }catch(e){ $('nsErr').textContent=e.message; $('nsErr').style.display='block'; }
+}
+
+// ---- project info: read-only view + Edit mode ----
+// Editable: name, address, mileage, start date, duration, sq ft, status.
+// Never editable here: links (super/customer/contact) and money.
+let INFO_SITE=null, SE_STATUS=new Set();
+const STATUS_OPTS=['Prestart','Active','Inactive','Completed'];
+function infoMode(edit){
+  $('sInfo').style.display=edit?'none':'';
+  $('sEdit').style.display=edit?'':'none';
+  $('sViewActions').style.display=edit?'none':'flex';
+  $('sEditActions').style.display=edit?'flex':'none';
+}
+function openInfo(s, startInEdit){
+  INFO_SITE=s;
+  $('sTitle').textContent=s.name||'Project';
+  $('siErr').style.display='none';
+  infoMode(false);
+  const na=(v)=> (v===0||v)?v:'N/A';
+  const dateStr=(v)=> v?String(v).slice(0,10):'N/A';
+  const join=(a,b)=>{ const t=[a,b].filter(Boolean).join(' · '); return t||'N/A'; };
+  const rows=[
+    ['Address', na(s.address)],
+    ['Mileage', (s.mileage!==''&&s.mileage!=null)?`${s.mileage} mi`:'N/A'],
+    ['Status', na(s.status)],
+    ['Customer', na(s.customer)],
+    ['Contact', join(s.contactName, s.contactPhone)],
+    ['Superintendent', join(s.superName, s.superPhone)],
+    ['Start date', dateStr(s.startDate)],
+    ['Duration', s.duration?`${s.duration} days`:'N/A'],
+    ['Completion', dateStr(s.completion)],
+    ['Square footage', na(s.sqft)],
+  ];
+  $('sInfo').innerHTML = rows.map(([k,v])=>
+    `<div style="display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid var(--line)">
+       <span style="color:var(--muted)">${k}</span><span style="text-align:right;font-weight:600">${esc(v)}</span>
+     </div>`).join('');
+  $('sbackdrop').classList.add('show');
+  if(startInEdit) enterInfoEdit(); // the row's ✎ button jumps straight to edit mode
+}
+const closeInfo=()=>$('sbackdrop').classList.remove('show');
+function enterInfoEdit(){
+  const s=INFO_SITE; if(!s) return;
+  $('seName').value=s.name||'';
+  $('seAddr').value=s.address||'';
+  $('seMi').value=(s.mileage!==''&&s.mileage!=null)?s.mileage:'';
+  $('seStart').value=(s.startDate||'').slice(0,10);
+  $('seDur').value=s.duration||'';
+  $('seSqft').value=s.sqft||'';
+  SE_STATUS=new Set((s.status||'').split(/,\s*/).filter(Boolean));
+  const c=$('seStatus');
+  c.innerHTML=STATUS_OPTS.map(o=>`<button type="button" class="eqtog ${SE_STATUS.has(o)?'on':''}" data-st="${o}">${o}</button>`).join('');
+  c.querySelectorAll('[data-st]').forEach(b=>{ b.onclick=()=>{ const v=b.dataset.st; SE_STATUS.has(v)?SE_STATUS.delete(v):SE_STATUS.add(v); b.classList.toggle('on'); }; });
+  infoMode(true);
+}
+async function saveInfo(){
+  const name=$('seName').value.trim();
+  if(!name){ $('siErr').textContent='Name cannot be empty.'; $('siErr').style.display='block'; return; }
+  try{
+    const r=await fetch(withKey('/api/save-site'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),
+      body:JSON.stringify({id:INFO_SITE.id, name, address:$('seAddr').value.trim(), mileage:$('seMi').value,
+        startDate:$('seStart').value, duration:$('seDur').value, sqft:$('seSqft').value, status:[...SE_STATUS]})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Save failed.');
+    closeInfo(); toast('Saved'); refresh();
+  }catch(e){ $('siErr').textContent=e.message; $('siErr').style.display='block'; }
+}
+
+function openSummary(){
+  const bySite={}; STATE.assignments.forEach(a=>{ (bySite[a.jobSiteId]=bySite[a.jobSiteId]||[]).push(a); });
+  const sites=STATE.jobSites.filter(s=>(bySite[s.id]||[]).length).sort((a,b)=>(a.order-b.order)||a.name.localeCompare(b.name));
+  $('sumTitle').textContent='Day summary — '+currentDate();
+  if(!sites.length){ $('sumBody').innerHTML='<div style="color:var(--muted)">Nobody is scheduled today.</div>'; }
+  else{
+    $('sumBody').innerHTML=sites.map(s=>{
+      const crew=(bySite[s.id]||[]).slice().sort((a,b)=>timeKey(a.startTime)-timeKey(b.startTime));
+      const conf=crew.filter(a=>a.status==='Confirmed').length;
+      const mi=(s.mileage!==''&&s.mileage!=null)?` · ${esc(s.mileage)} mi`:'';
+      const lines=crew.map(a=>{
+        const veh=a.vehicle?` · ${esc(a.vehicle)}`:' · own car';
+        const eq=(a.equipment&&a.equipment.length)?` · ${esc(a.equipment.join(', '))}`:'';
+        return `<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--line)">
+          <span><b>${esc(a.startTime||'—')}</b> &nbsp;${esc(a.employeeName)}<span style="color:var(--muted)">${veh}${eq}</span></span>
+          <span class="pill ${esc(a.status)}">${esc(a.status)}</span></div>`;
+      }).join('');
+      return `<div style="margin:0 0 18px">
+        <div style="font-weight:800;font-size:16px">${esc(s.name)}</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:6px">${esc(s.address||'')}${mi} — ${crew.length} crew, ${conf} confirmed</div>
+        ${lines}</div>`;
+    }).join('');
+  }
+  $('sumbackdrop').classList.add('show');
+}
+const closeSummary=()=>$('sumbackdrop').classList.remove('show');
+
+async function duplicateYesterday(){
+  const toDate=currentDate(), fromDate=shiftDate(toDate,-1);
+  if(!confirm(`Copy every assignment from ${fromDate} into ${toDate}?\nFresh links, all reset to Pending.`)) return;
+  try{ const r=await fetch(withKey('/api/duplicate'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({fromDate,toDate})});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||'Duplicate failed.'); toast(`Created ${j.created} for ${toDate}`); refresh();
+  }catch(e){ toast(e.message); }
+}
+
+// ---- wire up ----
+// Dragging a worker chip back onto the roster = remove them from that job.
+// (Wired once — the #rosterList element persists; only its innerHTML changes.)
+{
+  const RL=$('rosterList');
+  RL.ondragover=(ev)=>{ if(DRAGKIND==='aid'){ ev.preventDefault(); RL.classList.add('dropremove'); } };
+  RL.ondragleave=(ev)=>{ if(!RL.contains(ev.relatedTarget)) RL.classList.remove('dropremove'); };
+  RL.ondrop=(ev)=>{ RL.classList.remove('dropremove');
+    const d=ev.dataTransfer.getData('text/plain');
+    if(d.startsWith('aid:')){ ev.preventDefault(); quickRemove(d.slice(4)); } };
+}
+// restore saved column widths + wire the resize handles (Excel-style)
+document.documentElement.style.setProperty('--namew', (parseInt(localStorage.getItem('cd_name_w'))||190)+'px');
+document.documentElement.style.setProperty('--rosterw', (parseInt(localStorage.getItem('cd_roster_w'))||230)+'px');
+wireColResize($('nameResize'), '--namew', 'cd_name_w', 110, 420);
+wireColResize($('rosterResize'), '--rosterw', 'cd_roster_w', 180, 480);
+
+// ---- collapse / reopen the crew panel (slides off the left edge) ----
+function setRosterCollapsed(c){
+  document.querySelector('.app').classList.toggle('roster-collapsed', c);
+  $('rosterReopen').innerHTML = c ? '» crew' : '« crew';
+  $('rosterReopen').title = c ? 'Show the crew panel' : 'Hide the crew panel';
+  localStorage.setItem('cd_roster_collapsed', c ? '1' : '');
+}
+setRosterCollapsed(localStorage.getItem('cd_roster_collapsed')==='1');
+
+// crew tab: click toggles, drag moves it up/down (position remembered) so it
+// never sits in the way of the rows behind it
+{
+  const tab=$('rosterReopen');
+  const savedY=parseFloat(localStorage.getItem('cd_tab_y'));
+  if(!isNaN(savedY)){ tab.style.top=savedY+'px'; tab.style.transform='none'; }
+  let moved=false;
+  tab.onmousedown=(e)=>{
+    e.preventDefault(); moved=false;
+    const sy=e.clientY, st=tab.getBoundingClientRect().top;
+    const mv=(ev)=>{ const d=ev.clientY-sy; if(Math.abs(d)>4) moved=true;
+      const y=Math.max(56, Math.min(window.innerHeight-90, st+d));
+      tab.style.top=y+'px'; tab.style.transform='none'; };
+    const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);
+      if(moved) localStorage.setItem('cd_tab_y', tab.getBoundingClientRect().top); };
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  };
+  tab.onclick=()=>{ if(moved){ moved=false; return; }
+    setRosterCollapsed(!document.querySelector('.app').classList.contains('roster-collapsed')); };
+}
+
+// resizable job-site columns — remember each width like the name column
+[['--col-status','cd_col_status'],['--col-notes','cd_col_notes']]
+  .forEach(([v,k])=>{ const s=parseInt(localStorage.getItem(k)); if(s) document.documentElement.style.setProperty(v, s+'px'); });
+// restore the dragged section-divider height (see wireDivbarResize)
+{ const th=parseInt(localStorage.getItem('cd_top_h'));
+  if(th){ document.documentElement.style.setProperty('--topflex','0');
+          document.documentElement.style.setProperty('--toph', th+'px'); } }
+wireColResize($('statusResize'),    '--col-status', 'cd_col_status', 60, 180);
+wireColResize($('notesResize'),     '--col-notes',  'cd_col_notes',  90, 520);
+wireColResize($('notesLeftResize'), '--col-notes',  'cd_col_notes',  90, 520, -1);
+
+// format toolbar buttons — act on the selected (clicked) row
+$('fB').onclick=()=>applyFmt(f=>f.bold=!f.bold);
+$('fI').onclick=()=>applyFmt(f=>f.italic=!f.italic);
+$('fU').onclick=()=>applyFmt(f=>f.under=!f.under);
+$('fBig').onclick=()=>applyFmt(f=>f.size=Math.min(4,(+f.size||0)+1));
+$('fSm').onclick=()=>applyFmt(f=>f.size=Math.max(-1,(+f.size||0)-1));
+document.querySelectorAll('.fmtbar .sw').forEach(b=>{ b.onclick=()=>applyFmt(f=>f.fill=b.dataset.fill); });
+$('fNoFill').onclick=()=>applyFmt(f=>{ delete f.fill; });
+$('fClear').onclick=()=>applyFmt(f=>{ Object.keys(f).forEach(k=>delete f[k]); });
+$('date').value=localISO(new Date());
+$('prev').onclick=()=>{$('date').value=shiftDate(currentDate(),-1);refresh();};
+$('next').onclick=()=>{$('date').value=shiftDate(currentDate(),1);refresh();};
+$('today').onclick=()=>{$('date').value=localISO(new Date());refresh();};
+$('date').onchange=refresh;
+$('dup').onclick=duplicateYesterday;
+$('publish').onclick=openPublish;
+$('pubClose').onclick=closePublish;
+$('pubbackdrop').onclick=(e)=>{ if(e.target===$('pubbackdrop')) closePublish(); };
+$('summary').onclick=openSummary;
+$('sumClose').onclick=closeSummary;
+$('sumbackdrop').onclick=(e)=>{ if(e.target===$('sumbackdrop')) closeSummary(); };
+$('mkLinks').onclick=async()=>{ try{ const r=await fetch(withKey('/api/save-employee'),{method:'POST',headers:keyHeaders({'Content-Type':'application/json'}),body:JSON.stringify({ensureTokens:true})}); const j=await r.json(); if(!r.ok) throw new Error(j.error||'Failed.'); toast(j.created?`Made ${j.created} new link(s)`:'Everyone already has a link'); refresh(); }catch(e){ toast(e.message); } };
+$('selMode').onclick=()=>{ SELECT_MODE=!SELECT_MODE; $('selMode').classList.toggle('on',SELECT_MODE); $('selMode').textContent=SELECT_MODE?'Done':'Select'; $('selbar').style.display=SELECT_MODE?'flex':'none'; if(!SELECT_MODE) SELECTED.clear(); render(); };
+$('search').oninput=(e)=>{FILTER=e.target.value; renderRoster();};
+$('siteSearch').oninput=(e)=>{SITE_FILTER=e.target.value; renderSites();};
+$('showAll').onchange=(e)=>{SHOW_ALL=e.target.checked; renderSites();};
+$('unplacedOnly').onchange=(e)=>{UNPLACED_ONLY=e.target.checked; renderRoster();};
+$('selAll').onclick=(e)=>{e.preventDefault(); STATE.employees.filter(x=>x.active).forEach(x=>SELECTED.add(x.id)); render();};
+$('selNone').onclick=(e)=>{e.preventDefault(); SELECTED.clear(); render();};
+$('addWorker').onclick=()=>openWorker('');
+$('wSave').onclick=saveWorker; $('wCancel').onclick=closeWorker; $('wRemove').onclick=removeWorker; $('wRegen').onclick=regenLink;
+$('wbackdrop').onclick=(e)=>{ if(e.target===$('wbackdrop')) closeWorker(); };
+$('addSite').onclick=openNewSite;
+$('siteEditMode').onclick=toggleSiteEdit;
+$('nsSave').onclick=saveNewSite; $('nsCancel').onclick=closeNewSite;
+$('nsbackdrop').onclick=(e)=>{ if(e.target===$('nsbackdrop')) closeNewSite(); };
+$('mSave').onclick=saveEdit; $('mCancel').onclick=closeEdit; $('mDelete').onclick=deleteEdit;
+$('backdrop').onclick=(e)=>{ if(e.target===$('backdrop')) closeEdit(); };
+$('sCancel').onclick=closeInfo; $('sEditBtn').onclick=enterInfoEdit; $('seCancel').onclick=()=>infoMode(false); $('siSave').onclick=saveInfo;
+$('sbackdrop').onclick=(e)=>{ if(e.target===$('sbackdrop')) closeInfo(); };
+$('pSearch').oninput=(e)=>{ PICK_FILTER=e.target.value; renderPicker(); };
+$('pAdd').onclick=pickAdd; $('pCancel').onclick=closePicker; $('pbackdrop').onclick=(e)=>{ if(e.target===$('pbackdrop')) closePicker(); };
+
+refresh(); POLL=setInterval(()=>{ POLL_REFRESH=true; refresh(); }, 20000);
+</script>
+</body>
+</html>
